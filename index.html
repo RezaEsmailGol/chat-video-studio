@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استودیو ساخت ویدیو چت تلگرام (خروجی MP4)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Vazirmatn & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- MP4-Muxer for native H.264 MP4 generation -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+
+    <style>
+        * {
+            font-family: 'Vazirmatn', 'Inter', sans-serif;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        .canvas-shadow {
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-card-enter {
+            animation: fadeSlideIn 0.2s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navigation / Action Header -->
+    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-xl">
+                    <i class="fa-brands fa-telegram"></i>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        استودیو ساخت ویدیو چت تلگرام
+                        <span class="text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">خروجی MP4</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">طراحی مکالمه دوطرفه با ایموجی، عکس، ویدیو و دانلود مستقیم فیلم</p>
+                </div>
+            </div>
+
+            <!-- Main Playback & Export Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button id="btnPlayPreview" onclick="togglePreviewPlayPause()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-semibold transition flex items-center gap-2 border border-slate-700">
+                    <i class="fa-solid fa-play text-emerald-400"></i>
+                    <span>پخش انیمیشن چت</span>
+                </button>
+
+                <button onclick="showStaticFullChat()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition flex items-center gap-1.5 border border-slate-700" title="نمایش همه پیام‌ها یکجا">
+                    <i class="fa-solid fa-eye text-sky-400"></i>
+                    <span class="hidden sm:inline">نمایش کامل</span>
+                </button>
+
+                <button onclick="downloadSnapshotPNG()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition flex items-center gap-1.5 border border-slate-700" title="دانلود عکس PNG از صفحه چت">
+                    <i class="fa-solid fa-camera text-amber-400"></i>
+                    <span class="hidden sm:inline">عکس PNG</span>
+                </button>
+
+                <button id="btnExportMp4" onclick="exportChatVideoMP4()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-emerald-600/25 flex items-center gap-2">
+                    <i class="fa-solid fa-film"></i>
+                    <span>ساخت و دانلود ویدیو MP4</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- RIGHT COLUMN (in RTL): Editor, Composer & Settings (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-5 order-2 lg:order-1">
+
+            <!-- Add New Message Composer Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-plus-circle text-emerald-400"></i>
+                        افزودن پیام جدید به مکالمه (متن، ایموجی، عکس یا ویدیو)
+                    </h2>
+                    <span class="text-[11px] text-slate-400">دو طرفه (چپ و راست)</span>
+                </div>
+
+                <!-- Sender Selector Tabs -->
+                <div class="grid grid-cols-2 gap-2 mb-3 p-1 bg-slate-950 rounded-xl border border-slate-800">
+                    <button type="button" id="tabSenderLeft" onclick="selectComposerSender('left')" class="py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-white text-slate-900 shadow">
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                        <span>نفر مقابل (چپ - حباب سفید)</span>
+                    </button>
+                    <button type="button" id="tabSenderRight" onclick="selectComposerSender('right')" class="py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <span>من (راست - حباب سبز ✓✓)</span>
+                    </button>
+                </div>
+
+                <!-- Text & Time Input -->
+                <div class="flex flex-col sm:flex-row gap-2.5 mb-2.5">
+                    <div class="flex-1 relative">
+                        <textarea id="newMsgText" rows="2" placeholder="متن پیام یا کپشن عکس/ویدیو را بنویسید... (با Enter اضافه کنید)" class="w-full bg-slate-950 border border-slate-700/80 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none transition"></textarea>
+                    </div>
+                    <div class="sm:w-32 flex flex-row sm:flex-col gap-2">
+                        <div class="flex-1">
+                            <label class="block text-[11px] text-slate-400 mb-1">زمان پیام</label>
+                            <input id="newMsgTime" type="text" dir="ltr" value="3:45 PM" class="w-full bg-slate-950 border border-slate-700/80 focus:border-emerald-500 rounded-xl px-2.5 py-1.5 text-xs text-center font-mono text-emerald-300 outline-none">
+                        </div>
+                    </div>
+                    <div class="sm:w-32 flex flex-row sm:flex-col gap-2">
+                        <div class="flex-1">
+                            <label class="block text-[11px] text-slate-400 mb-1">مکث (ثانیه)</label>
+                            <input id="newMsgDelay" type="number" step="0.1" min="0.3" max="20" dir="ltr" value="1.5" class="w-full bg-slate-950 border border-slate-700/80 focus:border-emerald-500 rounded-xl px-2.5 py-1.5 text-xs text-center font-mono text-amber-300 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emoji & Media Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3 bg-slate-950/90 border border-slate-800 rounded-xl p-2">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <!-- Toggle Telegram Emoji Picker -->
+                        <button type="button" onclick="toggleEmojiPickerPanel()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition">
+                            <i class="fa-regular fa-face-smile text-sm"></i>
+                            <span>ایموجی‌های تلگرام</span>
+                        </button>
+
+                        <!-- Attach Photo -->
+                        <button type="button" onclick="document.getElementById('composerPhotoInput').click()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition">
+                            <i class="fa-regular fa-image text-sm"></i>
+                            <span>افزودن عکس</span>
+                        </button>
+                        <input type="file" id="composerPhotoInput" accept="image/*" class="hidden" onchange="handleComposerMediaUpload(event, 'photo')">
+
+                        <!-- Attach Video -->
+                        <button type="button" onclick="document.getElementById('composerVideoInput').click()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-purple-300 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-video text-sm"></i>
+                            <span>افزودن ویدیو</span>
+                        </button>
+                        <input type="file" id="composerVideoInput" accept="video/*,image/*" class="hidden" onchange="handleComposerMediaUpload(event, 'video')">
+
+                        <!-- Quick Sample Photo/Video Generator -->
+                        <button type="button" onclick="attachSampleTelegramMedia('photo')" class="px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-[11px] transition" title="افزودن عکس نمونه تست">
+                            + عکس نمونه
+                        </button>
+                        <button type="button" onclick="attachSampleTelegramMedia('video')" class="px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-[11px] transition" title="افزودن ویدیو نمونه تست">
+                            + ویدیو نمونه
+                        </button>
+                    </div>
+
+                    <span class="text-[11px] text-slate-400">ایموجی‌ها با گرافیک اصلی تلگرام (Apple) رندر می‌شوند</span>
+                </div>
+
+                <!-- Telegram Apple Emoji Picker Drawer -->
+                <div id="emojiPickerDrawer" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-3 mb-3">
+                    <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800">
+                        <div class="flex items-center gap-1 overflow-x-auto" id="emojiCategoryTabs">
+                            <!-- Populated by JS -->
+                        </div>
+                        <button type="button" onclick="toggleEmojiPickerPanel()" class="text-slate-400 hover:text-white text-xs px-2">بستن ✕</button>
+                    </div>
+                    <div id="emojiGridContainer" class="grid grid-cols-8 sm:grid-cols-11 gap-1.5 max-h-44 overflow-y-auto p-1">
+                        <!-- Populated with Apple/Telegram Emoji images -->
+                    </div>
+                </div>
+
+                <!-- Attached Media Preview Box (if user selected a photo or video) -->
+                <div id="composerMediaPreviewBox" class="hidden bg-slate-950 border border-emerald-700/60 rounded-xl p-2.5 mb-3 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <img id="composerMediaThumb" src="" alt="Preview" class="w-14 h-14 rounded-lg object-cover border border-slate-700 bg-slate-900">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="composerMediaTypeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">عکس تلگرام</span>
+                                <span class="text-xs text-slate-300">آماده ارسال در پیام</span>
+                            </div>
+                            <div id="composerVideoDurationRow" class="hidden flex items-center gap-2 mt-1.5">
+                                <label class="text-[11px] text-slate-400">مدت زمان ویدیو روی گوشه تصویر:</label>
+                                <input id="composerVideoDurationInput" type="text" dir="ltr" value="0:18" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs font-mono text-center text-purple-300 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" onclick="clearComposerMedia()" class="px-2.5 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 text-xs flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>حذف مدیا</span>
+                    </button>
+                </div>
+
+                <!-- Optional Reply Accordion / Controls -->
+                <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-2.5 mb-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+                            <input type="checkbox" id="newMsgHasReply" onchange="toggleNewReplyBox()" class="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-slate-900">
+                            <i class="fa-solid fa-reply text-emerald-400"></i>
+                            <span>این پیام ریپلای (پاسخ) به پیام قبلی است</span>
+                        </label>
+                        <select id="quickReplySelect" onchange="fillReplyFromExisting()" class="hidden text-xs bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-200 outline-none max-w-xs">
+                            <option value="">-- انتخاب از پیام‌های قبلی --</option>
+                        </select>
+                    </div>
+
+                    <div id="newReplyFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5 pt-2.5 border-t border-slate-800">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">نام فرد در کادر ریپلای (هماهنگ با نام بالای چت)</label>
+                            <input id="newReplyName" type="text" placeholder="مثلاً: Peyman Mohammadian" value="Peyman Mohammadian" oninput="syncReplyNameWithHeader(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">متن خلاصه ریپلای شده</label>
+                            <input id="newReplyText" type="text" placeholder="مثلاً: جوون بودی خواستگارات به..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons to Add -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 text-xs text-slate-400">
+                        <i class="fa-regular fa-lightbulb text-amber-400"></i>
+                        <span>نکته: می‌توانید هر پیام را در لیست پایین هم ویرایش یا جابجا کنید.</span>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="addMessageFromComposer('left')" class="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition border border-slate-600 flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-arrow-right text-slate-300"></i>
+                            <span>افزودن به چپ (سفید)</span>
+                        </button>
+                        <button onclick="addMessageFromComposer('right')" class="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5">
+                            <span>افزودن به راست (سبز)</span>
+                            <i class="fa-solid fa-check-double text-emerald-200"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video & Appearance Settings -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-sky-400"></i>
+                    تنظیمات ویدیو، فونت تلگرام و زمان‌بندی
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <!-- Font Family Selector -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-400 mb-1.5">فونت فارسی پیام‌ها</label>
+                        <select id="settingFont" onchange="updateSettings()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <option value="'Vazirmatn', Tahoma, sans-serif" selected>فونت وزیرمتن و وزیر (Vazirmatn)</option>
+                            <option value="Tahoma, 'Segoe UI', Arial, sans-serif">فونت تاهوما (Tahoma)</option>
+                            <option value="'Segoe UI', Tahoma, sans-serif">فونت ویندوز (Segoe UI)</option>
+                        </select>
+                    </div>
+
+                    <!-- Speed / Delay between messages -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-400 mb-1.5">تنظیم یکجای مکث همه پیام‌ها</label>
+                        <div class="flex items-center gap-1.5">
+                            <select id="settingSpeed" onchange="applyGlobalSpeedToAllMessages()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white outline-none">
+                                <option value="0.9">سریع (۰.۹ ثانیه)</option>
+                                <option value="1.5" selected>طبیعی (۱.۵ ثانیه)</option>
+                                <option value="2.2">آرام (۲.۲ ثانیه)</option>
+                                <option value="3.0">خیلی آرام (۳ ثانیه)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Theme / Wallpaper -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-400 mb-1.5">پس‌زمینه صفحه چت</label>
+                        <select id="settingTheme" onchange="updateSettings()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <option value="classic_green" selected>سبز کلاسیک تلگرام (مشابه عکس شما)</option>
+                            <option value="dark_telegram">تلگرام حالت شب (Dark Mode)</option>
+                            <option value="sky_blue">آبی ملایم تلگرام</option>
+                            <option value="custom_image">آپلود تصویر پس‌زمینه دلخواه...</option>
+                        </select>
+                        <input type="file" id="bgFileInput" accept="image/*" class="hidden" onchange="handleCustomBgUpload(event)">
+                    </div>
+
+                    <!-- Aspect Ratio / Header Mode -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <label class="block text-xs text-slate-400 mb-1.5">قالب صفحه (هدر بالا و چت‌بار پایین)</label>
+                        <select id="settingHeaderMode" onchange="updateSettings()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <option value="with_header" selected>کامل با هدر بالا و چت‌بار پایین (مشابه تصویر جدید)</option>
+                            <option value="clean">بدون هدر و چت‌بار (فقط محیط چت)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Font Size & Text-to-Time Spacing Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-800/80">
+                    <!-- Font Size Control -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs text-slate-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-text-height text-emerald-400"></i>
+                                <span>سایز نوشته پیام‌ها (پیکسل)</span>
+                            </label>
+                            <span id="fontSizeBadge" class="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">22px</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <input type="range" id="settingFontSizeRange" min="14" max="38" step="1" value="22" oninput="syncFontSizeControl(this.value)" class="flex-1 accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg">
+                            <input type="number" id="settingFontSizeInput" min="12" max="50" step="1" dir="ltr" value="22" oninput="syncFontSizeControl(this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-center text-white outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Spacing from Text to Time Control -->
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-xs text-slate-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-arrows-up-down text-amber-400"></i>
+                                <span>فاصله عمودی متن پیام تا ساعت</span>
+                            </label>
+                            <span id="timeSpacingBadge" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">26px</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <input type="range" id="settingTimeSpacingRange" min="4" max="65" step="1" value="26" oninput="syncTimeSpacingControl(this.value)" class="flex-1 accent-amber-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg">
+                            <input type="number" id="settingTimeSpacingInput" min="0" max="100" step="1" dir="ltr" value="26" oninput="syncTimeSpacingControl(this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-center text-white outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Name, Avatar & Extra Toggles Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 mt-3 pt-3 border-t border-slate-800/80 items-center">
+                    <div class="sm:col-span-5 flex items-center gap-3 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <div class="relative shrink-0">
+                            <img id="contactAvatarPreview" src="" alt="Avatar" class="hidden w-11 h-11 rounded-full object-cover border border-slate-600">
+                            <div id="contactAvatarPlaceholder" class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
+                                P
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <label class="block text-[11px] text-slate-400 mb-1">عکس پروفایل بالای چت</label>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="document.getElementById('avatarFileInput').click()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 text-[11px] font-medium transition">
+                                    <i class="fa-solid fa-camera ml-1"></i>انتخاب عکس
+                                </button>
+                                <button type="button" id="btnRemoveAvatar" onclick="clearContactAvatar()" class="hidden px-2 py-1 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 text-[11px]">
+                                    حذف
+                                </button>
+                                <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="handleAvatarUpload(event)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-4 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <label class="block text-[11px] text-slate-400 mb-1">نام بالای چت (و نام در حال تایپ)</label>
+                        <input type="text" id="settingContactName" dir="ltr" value="Peyman Mohammadian" oninput="updateSettings()" placeholder="مثلاً: angie lee" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                    </div>
+
+                    <div class="sm:col-span-3 flex flex-col gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="settingShowTyping" checked onchange="updateSettings()" class="rounded border-slate-700 text-emerald-500 bg-slate-950">
+                            <span>نمایش وضعیت <code class="text-sky-300">... is typing</code></span>
+                        </label>
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="settingSoundEffects" checked onchange="updateSettings()" class="rounded border-slate-700 text-emerald-500 bg-slate-950">
+                            <span>افکت صوتی پیام در ویدیو MP4</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editable Messages List -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-comments text-emerald-400"></i>
+                            لیست پیام‌های چت
+                        </h3>
+                        <span id="msgCountBadge" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">12 پیام</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetToDefaultScreenshotChat()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1 border border-slate-700">
+                            <i class="fa-solid fa-rotate-left text-sky-400"></i>
+                            <span>بازگردانی چت عکس نمونه</span>
+                        </button>
+                        <button onclick="clearAllMessages()" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 text-xs transition flex items-center gap-1 border border-rose-800/50">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>حذف همه</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scrollable Messages Container -->
+                <div id="messagesListContainer" class="space-y-2.5 max-h-[460px] overflow-y-auto pr-1 pl-1">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- LEFT COLUMN (in RTL): Sticky Live Canvas Preview (5 cols) -->
+        <section class="lg:col-span-5 lg:sticky lg:top-20 flex flex-col items-center order-1 lg:order-2">
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col items-center">
+                <!-- Preview Top Bar -->
+                <div class="w-full flex items-center justify-between mb-3 px-1">
+                    <div class="flex items-center gap-2">
+                        <span id="statusIndicatorDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        <span id="previewStatusText" class="text-xs font-medium text-slate-300">پیش‌نمایش زنده بوم (Canvas)</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-400 font-mono">
+                        <span id="canvasResolutionLabel">750 × 1000 HD</span>
+                    </div>
+                </div>
+
+                <!-- The HTML5 Canvas Container -->
+                <div class="relative w-full max-w-[360px] aspect-[9/16] rounded-xl overflow-hidden canvas-shadow bg-slate-950 flex items-center justify-center">
+                    <canvas id="chatCanvas" width="750" height="1334" class="w-full h-full object-contain block"></canvas>
+
+                    <!-- Recording / Rendering Overlay Badge -->
+                    <div id="recordingBadge" class="hidden absolute top-3 left-3 bg-rose-600/95 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg animate-pulse pointer-events-none">
+                        <span class="w-2 h-2 rounded-full bg-white"></span>
+                        <span id="recordingBadgeText">در حال ضبط MP4...</span>
+                    </div>
+                </div>
+
+                <!-- Playback Progress & Scrubber Bar -->
+                <div class="w-full max-w-[420px] mt-3.5 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                    <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
+                        <span id="playbackStepLabel">نمایش ۱۲ از ۱۲ پیام</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="stepBackward()" class="hover:text-white transition px-1" title="پیام قبلی">
+                                <i class="fa-solid fa-backward-step"></i>
+                            </button>
+                            <button id="btnTogglePlaySmall" onclick="togglePreviewPlayPause()" class="text-emerald-400 hover:text-emerald-300 transition px-1.5 font-bold">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                            <button onclick="stepForward()" class="hover:text-white transition px-1" title="پیام بعدی">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div id="playbackProgressBar" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full w-full transition-all duration-150"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Video Export Complete / Progress Modal -->
+    <div id="exportModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-video text-emerald-400"></i>
+                    <span id="exportModalTitle">در حال ساخت ویدیو MP4...</span>
+                </h3>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Progress View -->
+            <div id="exportProgressView" class="py-6 text-center space-y-4">
+                <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 text-2xl">
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                </div>
+                <div class="space-y-1">
+                    <p id="exportProgressStatus" class="text-sm font-medium text-slate-200">در حال رندر فریم‌به‌فریم انیمیشن چت...</p>
+                    <p class="text-xs text-slate-400">لطفاً چند ثانیه صبر کنید تا تمام پیام‌ها از اول تا آخر ضبط شوند</p>
+                </div>
+                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5">
+                    <div id="exportProgressFill" class="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-150" style="width: 0%"></div>
+                </div>
+                <p id="exportPercentText" class="text-xs font-mono text-emerald-400 font-bold">0%</p>
+            </div>
+
+            <!-- Finished Video View -->
+            <div id="exportResultView" class="hidden py-4 space-y-4">
+                <div class="rounded-xl overflow-hidden border border-slate-700 bg-black aspect-[3/4] max-h-80 mx-auto flex items-center justify-center">
+                    <video id="exportedVideoPreview" controls playsinline class="w-full h-full object-contain"></video>
+                </div>
+                <div class="bg-emerald-950/40 border border-emerald-800/50 rounded-xl p-3 text-xs text-emerald-200 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+                    <span id="exportFormatNotice">ویدیوی شما با کیفیت بالا آماده دانلود است!</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <a id="downloadVideoLink" href="#" download="telegram-chat.mp4" class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-sm text-center shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>دانلود فایل ویدیو (MP4)</span>
+                    </a>
+                    <button onclick="closeExportModal()" class="py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium">
+                        بستن
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_SCREENSHOT_MESSAGES = [
+            {
+                id: 'm1',
+                side: 'left',
+                text: 'سلام! چطوری؟ کجایی کم‌پیدایی؟ 👋',
+                time: '10:14 AM',
+                delaySec: 1.6,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm2',
+                side: 'right',
+                text: 'سلام عزیزم، ممنونم، درگیر کارا بودم ❤️',
+                time: '10:15 AM',
+                delaySec: 1.5,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm3',
+                side: 'right',
+                text: 'تو چطوری؟ خسته نباشی',
+                time: '10:15 AM',
+                delaySec: 1.4,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm4',
+                side: 'left',
+                text: 'سلامتی، شکر خدا. پروژه جدید چطور پیش میره؟',
+                time: '10:16 AM',
+                delaySec: 1.8,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm5',
+                side: 'right',
+                text: 'عالیه، امشب بخش خروجیش تموم میشه ان‌شاءالله ✨',
+                time: '10:17 AM',
+                delaySec: 2.0,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm6',
+                side: 'left',
+                text: 'وای چه عالی! حتماً خبرم کن ببینمش 😍',
+                time: '10:18 AM',
+                delaySec: 1.5,
+                replyName: 'Peyman Mohammadian',
+                replyText: 'عالیه، امشب بخش خروجیش تم...'
+            },
+            {
+                id: 'm7',
+                side: 'right',
+                text: 'حتماً، حتماً! حالمون خوب میشه پاتوق کنیم یه روز',
+                time: '10:19 AM',
+                delaySec: 1.8,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm8',
+                side: 'left',
+                text: 'پایه ام شدید! کی وقتت آزاده؟',
+                time: '10:20 AM',
+                delaySec: 1.5,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm9',
+                side: 'right',
+                text: 'آخر هفته چطوره؟ پنجشنبه عصر؟',
+                time: '10:21 AM',
+                delaySec: 1.6,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm10',
+                side: 'left',
+                text: 'عالیه، پنجشنبه ساعت ۵ میبینیمت قهوه چی؟ ☕️',
+                time: '10:22 AM',
+                delaySec: 1.7,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm11',
+                side: 'right',
+                text: 'حله جیگر، حتماً همونجا میبینمتان! 👍',
+                time: '10:22 AM',
+                delaySec: 1.4,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'm12',
+                side: 'left',
+                text: 'قربونت، فعلاً مراقب خودت باش 👋🔥',
+                time: '10:23 AM',
+                delaySec: 1.5,
+                replyName: '',
+                replyText: ''
+            }
+        ];
+
+        let messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
+        let composerSide = 'left';
+
+        let appSettings = {
+            msgIntervalMs: 1500,
+            fontFamily: "'Vazirmatn', Tahoma, sans-serif",
+            fontSize: 22,
+            timeGap: 26,
+            theme: 'classic_green',
+            headerMode: 'with_header',
+            showTyping: true,
+            soundEffects: true,
+            contactName: 'Peyman Mohammadian',
+            contactAvatarImg: null,
+            customBgImage: null
+        };
+
+        // Canvas & Animation State
+        const canvas = document.getElementById('chatCanvas');
+        const ctx = canvas.getContext('2d');
+        let patternCanvas = null;
+
+        const APPLE_EMOJI_CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/';
+        const emojiImageCache = new Map();
+
+        const TELEGRAM_EMOJI_CATEGORIES = {
+            'پراستفاده و خنده': [
+                '😂','🤣','😭','😅','😆','😉','😊','😍','🥰','😘','😜','🤪','🤨','🧐','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','🤡','💩','👻','💀','👽','🤖'
+            ],
+            'قلب و احساسی': [
+                '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','🔥','✨','🌟','💫','💥','💢','💦','💧','💤','🕳️','🎉','🎊','🎈','🎂','🎁','🌹','🥀','🌷','🌸','💐','🌺','🌻'
+            ],
+            'دست و اشاره‌ها': [
+                '👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👋','🤚','🖐️','✋','🖖','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦵','🦿','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄'
+            ],
+            'اشیاء و روزمره': [
+                '📱','💻','⌨️','🖥️','📷','📸','📹','🎥','📞','☎️','📺','📻','⏰','⏳','⌛','🔋','🔌','💡','🔦','🕯️','💸','💵','💴','💶','💷','💰','💳','💎','⚖️','🔧','🔨','⚒️','🛠️','⛏️','🔩','⚙️','🔫','💣','🔪','🗡️','⚔️','🛡️','🚬','⚰️','⚱️','🏺','🔮','📿','🧿','💈','⚗️','🔭','🔬','💊','💉','🩸','🩹','🩺','🌡️','🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🚚','🚛','🚜','🛵','🏍️','✈️','🚀','🛸','🚁','⛵','🚤','🛳️','🏠','🏡','🏢'
+            ],
+            'خوراکی و حیوانات': [
+                '🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🥐','🥯','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🫓','🥪','🥙','🧆','🌮','🌯','🫔','🥗','🥘','🫕','🥫','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🦪','🍤','🍙','🍚','🍘','🍥','🥠','🥮','🍢','🍡','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','🌰','🥜','🍯','🥛','🍼','🫖','☕','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾','🧊','🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐒','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞'
+            ]
+        };
+
+        let activeEmojiCategory = Object.keys(TELEGRAM_EMOJI_CATEGORIES)[0];
+
+        let composerMediaState = {
+            type: null,
+            imgElement: null,
+            videoElement: null,
+            dataUrl: null,
+            durationText: '0:18'
+        };
+
+        function drawCheckmarks(c, x, y, color = '#4fae4e') {
+            c.save();
+            c.strokeStyle = color;
+            c.lineWidth = 1.8;
+            c.lineCap = 'round';
+            c.lineJoin = 'round';
+
+            // First checkmark
+            c.beginPath();
+            c.moveTo(x, y - 1);
+            c.lineTo(x + 4, y + 3);
+            c.lineTo(x + 10, y - 4);
+            c.stroke();
+
+            // Second overlapping checkmark
+            c.beginPath();
+            c.moveTo(x + 5, y - 1);
+            c.lineTo(x + 9, y + 3);
+            c.lineTo(x + 15, y - 4);
+            c.stroke();
+            c.restore();
+        }
+
+        function emojiToUnifiedCode(emojiStr) {
+            const codePoints = [];
+            for (const symbol of Array.from(emojiStr)) {
+                const cp = symbol.codePointAt(0).toString(16).toLowerCase();
+                codePoints.push(cp);
+            }
+            return codePoints.join('-');
+        }
+
+        function getTelegramEmojiImage(emojiStr) {
+            if (emojiImageCache.has(emojiStr)) {
+                return emojiImageCache.get(emojiStr);
+            }
+
+            const fullCode = emojiToUnifiedCode(emojiStr);
+            const strippedCode = fullCode.replace(/-fe0f/g, '');
+            const entry = { img: null, loaded: false, failed: false };
+            emojiImageCache.set(emojiStr, entry);
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                entry.img = img;
+                entry.loaded = true;
+                if (!animState.isPlaying && !animState.isExporting) {
+                    renderChatFrame(null);
+                }
+            };
+            img.onerror = () => {
+                if (img.src.indexOf(strippedCode + '.png') === -1 && strippedCode !== fullCode) {
+                    img.src = APPLE_EMOJI_CDN + strippedCode + '.png';
+                } else {
+                    entry.failed = true;
+                }
+            };
+            img.src = APPLE_EMOJI_CDN + fullCode + '.png';
+            return entry;
+        }
+
+        const EMOJI_REGEX = /(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*)/gu;
+
+        function tokenizeTextAndEmojis(str) {
+            const result = [];
+            let lastIndex = 0;
+            const text = String(str || '');
+            EMOJI_REGEX.lastIndex = 0;
+            let match;
+            while ((match = EMOJI_REGEX.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    result.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+                }
+                result.push({ type: 'emoji', value: match[0] });
+                lastIndex = match.index + match[0].length;
+            }
+            if (lastIndex < text.length) {
+                result.push({ type: 'text', value: text.slice(lastIndex) });
+            }
+            return result;
+        }
+
+        function isPureSingleOrFewEmojis(str) {
+            const trimmed = String(str || '').trim();
+            if (!trimmed) return 0;
+            const tokens = tokenizeTextAndEmojis(trimmed);
+            if (tokens.some(t => t.type === 'text' && t.value.trim() !== '')) return 0;
+            const emojiCount = tokens.filter(t => t.type === 'emoji').length;
+            return emojiCount >= 1 && emojiCount <= 3 ? emojiCount : 0;
+        }
+
+        function measureRichLineWidth(c, lineStr, fontSize, persianFont) {
+            c.font = `400 ${fontSize}px ${persianFont}`;
+            const tokens = tokenizeTextAndEmojis(lineStr);
+            let totalW = 0;
+            const emojiSize = Math.round(fontSize * 1.18);
+            tokens.forEach(tok => {
+                if (tok.type === 'emoji') {
+                    getTelegramEmojiImage(tok.value);
+                    totalW += emojiSize + 2;
+                } else {
+                    totalW += c.measureText(tok.value).width;
+                }
+            });
+            return totalW;
+        }
+
+        function drawRichLineWithTelegramEmojis(c, lineStr, rightEdgeX, leftEdgeX, baselineY, fontSize, persianFont, textColor, isLTR = false) {
+            const tokens = tokenizeTextAndEmojis(lineStr);
+            const emojiSize = Math.round(fontSize * 1.18);
+            c.font = `400 ${fontSize}px ${persianFont}`;
+            c.fillStyle = textColor;
+
+            if (isLTR) {
+                let cursorX = leftEdgeX;
+                tokens.forEach(tok => {
+                    if (tok.type === 'emoji') {
+                        const entry = getTelegramEmojiImage(tok.value);
+                        if (entry && entry.loaded && entry.img) {
+                            c.drawImage(entry.img, cursorX, baselineY - emojiSize + 5, emojiSize, emojiSize);
+                        } else {
+                            c.direction = 'ltr';
+                            c.textAlign = 'left';
+                            c.fillText(tok.value, cursorX, baselineY);
+                        }
+                        cursorX += emojiSize + 2;
+                    } else {
+                        c.direction = 'ltr';
+                        c.textAlign = 'left';
+                        c.fillText(tok.value, cursorX, baselineY);
+                        cursorX += c.measureText(tok.value).width;
+                    }
+                });
+            } else {
+                let cursorRightX = rightEdgeX;
+                tokens.forEach(tok => {
+                    if (tok.type === 'emoji') {
+                        const entry = getTelegramEmojiImage(tok.value);
+                        const drawX = cursorRightX - emojiSize;
+                        if (entry && entry.loaded && entry.img) {
+                            c.drawImage(entry.img, drawX, baselineY - emojiSize + 5, emojiSize, emojiSize);
+                        } else {
+                            c.direction = 'rtl';
+                            c.textAlign = 'right';
+                            c.fillText(tok.value, cursorRightX, baselineY);
+                        }
+                        cursorRightX -= (emojiSize + 2);
+                    } else {
+                        const segW = c.measureText(tok.value).width;
+                        c.direction = 'rtl';
+                        c.textAlign = 'right';
+                        c.fillText(tok.value, cursorRightX, baselineY);
+                        cursorRightX -= segW;
+                    }
+                });
+            }
+        }
+
+        let animState = {
+            isPlaying: false,
+            isExporting: false,
+            startTime: 0,
+            currentTimeMs: 0,
+            totalDurationMs: 0,
+            visibleCount: messages.length,
+            mode: 'static',
+            scrollY: null,
+            targetScrollY: 0,
+            rafId: null,
+            lastTriggeredSoundIndex: -1
+        };
+
+        let audioCtx = null;
+        let audioDest = null;
+
+        function ensureAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                    audioDest = audioCtx.createMediaStreamDestination();
+                    // Keep a silent oscillator running so MediaRecorder's audio track stays active & synchronized
+                    const silentOsc = audioCtx.createOscillator();
+                    const silentGain = audioCtx.createGain();
+                    silentGain.gain.value = 0.00001;
+                    silentOsc.connect(silentGain);
+                    silentGain.connect(audioDest);
+                    silentOsc.start();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTelegramPopSound(side) {
+            if (!appSettings.soundEffects) return;
+            try {
+                ensureAudioContext();
+                if (!audioCtx) return;
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                if (side === 'right') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.exponentialRampToValueAtTime(790, now + 0.075);
+                } else {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(640, now);
+                    osc.frequency.exponentialRampToValueAtTime(420, now + 0.085);
+                }
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(0.24, now + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                if (audioDest) {
+                    gain.connect(audioDest);
+                }
+
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } catch (e) {}
+        }
+
+        // Synthesize full PCM Float32 audio track with exact Telegram message pop sounds for MP4 export
+        function synthesizeFullChatAudioTrack(totalDurationMs, sampleRate = 48000) {
+            const totalSamples = Math.ceil((totalDurationMs / 1000) * sampleRate);
+            const pcmData = new Float32Array(totalSamples);
+
+            if (!appSettings.soundEffects) {
+                return pcmData;
+            }
+
+            const { schedule } = buildTimelineSchedule();
+
+            schedule.forEach(slot => {
+                const msg = messages[slot.index];
+                if (!msg) return;
+                const isRight = msg.side === 'right';
+                const startSample = Math.floor((slot.startMs / 1000) * sampleRate);
+                const popDurationSec = isRight ? 0.085 : 0.095;
+                const popSamples = Math.floor(popDurationSec * sampleRate);
+
+                let phase = 0;
+                let phase2 = 0;
+
+                for (let i = 0; i < popSamples; i++) {
+                    const outIdx = startSample + i;
+                    if (outIdx >= totalSamples) break;
+
+                    const t = i / sampleRate;
+                    const progress = i / popSamples;
+
+                    // Frequency sweep matching Telegram sent/received bubble pop
+                    const f0 = isRight ? 520 : 640;
+                    const f1 = isRight ? 790 : 420;
+                    const freq = f0 * Math.pow(f1 / f0, progress);
+
+                    phase += (2 * Math.PI * freq) / sampleRate;
+                    phase2 += (2 * Math.PI * (freq * 1.5)) / sampleRate;
+
+                    // Fast attack, smooth exponential decay envelope
+                    let env = 0;
+                    if (t < 0.012) {
+                        env = (t / 0.012) * 0.32;
+                    } else {
+                        const decayProgress = (t - 0.012) / (popDurationSec - 0.012);
+                        env = 0.32 * Math.pow(0.002, decayProgress);
+                    }
+
+                    let wave = 0;
+                    if (isRight) {
+                        wave = Math.sin(phase) + 0.22 * Math.sin(phase2);
+                    } else {
+                        // Warm triangle + sine blend for incoming message
+                        const tri = (2 / Math.PI) * Math.asin(Math.sin(phase));
+                        wave = 0.75 * tri + 0.25 * Math.sin(phase2);
+                    }
+
+                    pcmData[outIdx] = Math.max(-0.98, Math.min(0.98, pcmData[outIdx] + wave * env));
+                }
+            });
+
+            return pcmData;
+        }
+
+        function generateTelegramPatternCanvas() {
+            const pCanvas = document.createElement('canvas');
+            pCanvas.width = 400;
+            pCanvas.height = 400;
+            const pCtx = pCanvas.getContext('2d');
+
+            pCtx.strokeStyle = 'rgba(55, 92, 48, 0.13)';
+            pCtx.fillStyle = 'rgba(55, 92, 48, 0.06)';
+            pCtx.lineWidth = 2.2;
+            pCtx.lineCap = 'round';
+            pCtx.lineJoin = 'round';
+
+            const doodles = [
+                (c, x, y) => {
+                    c.beginPath();
+                    c.arc(x, y, 16, 0, Math.PI * 2);
+                    c.moveTo(x - 12, y - 10); c.lineTo(x - 16, y - 24); c.lineTo(x - 4, y - 15);
+                    c.moveTo(x + 12, y - 10); c.lineTo(x + 16, y - 24); c.lineTo(x + 4, y - 15);
+                    c.stroke();
+                    c.beginPath();
+                    c.arc(x - 5, y - 2, 1.8, 0, Math.PI * 2);
+                    c.arc(x + 5, y - 2, 1.8, 0, Math.PI * 2);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.ellipse(x, y, 22, 9, -0.2, 0, Math.PI * 2);
+                    c.stroke();
+                    c.beginPath();
+                    c.arc(x - 2, y - 4, 10, Math.PI, 0);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.arc(x, y - 8, 11, Math.PI, 0, false);
+                    c.lineTo(x, y + 18);
+                    c.lineTo(x - 11, y - 8);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.moveTo(x, y + 20);
+                    c.quadraticCurveTo(x + 4, y, x + 2, y - 12);
+                    c.moveTo(x + 2, y - 12); c.quadraticCurveTo(x - 14, y - 16, x - 18, y - 6);
+                    c.moveTo(x + 2, y - 12); c.quadraticCurveTo(x + 16, y - 16, x + 20, y - 6);
+                    c.moveTo(x + 2, y - 12); c.quadraticCurveTo(x - 8, y - 24, x - 14, y - 18);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.moveTo(x - 10, y - 10);
+                    c.lineTo(x + 10, y - 10);
+                    c.lineTo(x + 16, y - 2);
+                    c.lineTo(x, y + 16);
+                    c.lineTo(x - 16, y - 2);
+                    c.closePath();
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.arc(x, y, 15, Math.PI, 0, false);
+                    c.lineTo(x + 24, y - 8);
+                    c.lineTo(x + 20, y + 4);
+                    c.lineTo(x - 15, y);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.arc(x - 6, y + 10, 5, 0, Math.PI * 2);
+                    c.arc(x + 10, y + 6, 5, 0, Math.PI * 2);
+                    c.moveTo(x - 1, y + 10); c.lineTo(x - 1, y - 10);
+                    c.lineTo(x + 15, y - 14); c.lineTo(x + 15, y + 6);
+                    c.stroke();
+                },
+                (c, x, y) => {
+                    c.beginPath();
+                    c.arc(x, y - 6, 14, 0, Math.PI * 2);
+                    c.rect(x - 5, y + 13, 10, 7);
+                    c.moveTo(x - 8, y + 6); c.lineTo(x - 5, y + 13);
+                    c.moveTo(x + 8, y + 6); c.lineTo(x + 5, y + 13);
+                    c.stroke();
+                }
+            ];
+
+            const gridPositions = [
+                [45, 45], [145, 38], [250, 52], [350, 42],
+                [85, 130], [195, 125], [305, 135], [35, 215],
+                [135, 225], [245, 210], [355, 225], [65, 320]
+            ];
+
+            gridPositions.forEach((pos, idx) => {
+                pCtx.save();
+                pCtx.translate(pos[0], pos[1]);
+                pCtx.rotate(((idx % 5) - 2) * 0.14);
+                const fn = doodles[idx % doodles.length];
+                fn(pCtx, 0, 0);
+                pCtx.restore();
+            });
+
+            patternCanvas = pCanvas;
+        }
+
+        function drawTelegramBackground(c, width, height) {
+            if (appSettings.theme === 'custom_image' && appSettings.customBgImage) {
+                const img = appSettings.customBgImage;
+                const scale = Math.max(width / img.width, height / img.height);
+                const nw = img.width * scale;
+                const nh = img.height * scale;
+                c.drawImage(img, (width - nw) / 2, (height - nh) / 2, nw, nh);
+                return;
+            }
+
+            if (appSettings.theme === 'dark_telegram') {
+                const grad = c.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#0f172a');
+                grad.addColorStop(0.5, '#1e293b');
+                grad.addColorStop(1, '#0f2922');
+                c.fillStyle = grad;
+                c.fillRect(0, 0, width, height);
+            } else if (appSettings.theme === 'sky_blue') {
+                const grad = c.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#cbe5ff');
+                grad.addColorStop(0.5, '#a8d1f7');
+                grad.addColorStop(1, '#8ec3f0');
+                c.fillStyle = grad;
+                c.fillRect(0, 0, width, height);
+            } else {
+                const grad = c.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#c6dbaf');
+                grad.addColorStop(0.35, '#a8c699');
+                grad.addColorStop(0.7, '#95b989');
+                grad.addColorStop(1, '#b8d1a7');
+                c.fillStyle = grad;
+                c.fillRect(0, 0, width, height);
+            }
+
+            if (patternCanvas) {
+                c.save();
+                if (appSettings.theme === 'dark_telegram') {
+                    c.globalAlpha = 0.35;
+                }
+                const pat = c.createPattern(patternCanvas, 'repeat');
+                c.fillStyle = pat;
+                c.fillRect(0, 0, width, height);
+                c.restore();
+            }
+        }
+
+        function wrapPersianText(c, text, maxWidth) {
+            const rawLines = String(text || '').split('\n');
+            const lines = [];
+            const persianFont = appSettings.fontFamily || "'Vazirmatn', Tahoma, sans-serif";
+            const fontSize = Number(appSettings.fontSize) || 22;
+
+            rawLines.forEach(rawLine => {
+                const words = rawLine.split(' ');
+                let currentLine = '';
+
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i];
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    const width = measureRichLineWidth(c, testLine, fontSize, persianFont);
+                    if (width > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                if (currentLine !== '' || rawLine === '') {
+                    lines.push(currentLine);
+                }
+            });
+
+            return lines.length > 0 ? lines : [];
+        }
+
+        function measureAndLayoutBubble(c, msg, canvasWidth) {
+            const maxBubbleW = Math.round(canvasWidth * 0.76);
+            const paddingX = 15;
+            const topPadding = 12;
+            const persianFont = appSettings.fontFamily || "'Vazirmatn', Tahoma, sans-serif";
+            const fontSize = Number(appSettings.fontSize) || 22;
+            const lineHeight = Math.round(fontSize * 1.48);
+            const timeGap = Number(appSettings.timeGap) !== undefined ? Number(appSettings.timeGap) : 26;
+
+            const hasReply = Boolean(msg.replyName || msg.replyText);
+            const hasMedia = Boolean(msg.mediaType && msg.mediaImg);
+            const hasText = Boolean(msg.text && msg.text.trim() !== '');
+
+            let bubbleW = 200;
+            let bubbleH = 50;
+            let textLines = [];
+            let isJumbomoji = false;
+
+            if (hasMedia) {
+                const mediaAspect = (msg.mediaImg.height && msg.mediaImg.width) ? (msg.mediaImg.height / msg.mediaImg.width) : 0.75;
+                const mediaW = Math.min(maxBubbleW - 10, 440);
+                const mediaH = Math.round(mediaW * Math.min(1.3, Math.max(0.56, mediaAspect)));
+                bubbleW = mediaW + 10;
+                bubbleH = mediaH + 10;
+
+                if (hasText) {
+                    textLines = wrapPersianText(c, msg.text, bubbleW - (paddingX * 2));
+                    bubbleH += (textLines.length * lineHeight) + timeGap + 12;
+                }
+
+                if (!hasText) {
+                    bubbleH += 6; // Extra space for pill overlay
+                }
+            } else if (hasText) {
+                const emojiCount = isPureSingleOrFewEmojis(msg.text);
+                if (emojiCount > 0) {
+                    isJumbomoji = true;
+                    bubbleW = emojiCount === 1 ? 98 : (emojiCount === 2 ? 145 : 190);
+                    bubbleH = 84 + Math.max(8, Math.round(timeGap * 0.45));
+                } else {
+                    textLines = wrapPersianText(c, msg.text, maxBubbleW - (paddingX * 2) - 40);
+                    let maxLineWidth = 110;
+                    textLines.forEach(l => {
+                        const lw = measureRichLineWidth(c, l, fontSize, persianFont);
+                        if (lw > maxLineWidth) maxLineWidth = lw;
+                    });
+
+                    c.font = `400 12px 'Inter', 'Vazirmatn', sans-serif`;
+                    const timeWidth = c.measureText(msg.time || '3:45 PM').width + 55;
+                    bubbleW = Math.max(maxLineWidth + paddingX * 2 + 16, timeWidth + 44);
+                    if (bubbleW > maxBubbleW) bubbleW = maxBubbleW;
+
+                    bubbleH = topPadding + (textLines.length * lineHeight) + timeGap + 14;
+                }
+            }
+
+            if (hasReply) {
+                bubbleW = Math.max(bubbleW, 265);
+                bubbleH += 54;
+            }
+
+            return {
+                bubbleW,
+                bubbleH,
+                textLines,
+                hasReply,
+                hasMedia,
+                hasText,
+                isJumbomoji,
+                fontSize,
+                lineHeight
+            };
+        }
+
+        function drawSingleBubble(c, msg, layout, bubbleTopY, canvasWidth, scale = 1) {
+            const isRight = msg.side === 'right';
+            const marginSide = 18;
+            const bubbleW = layout.bubbleW;
+            const bubbleH = layout.bubbleH;
+            const persianFont = appSettings.fontFamily || "'Vazirmatn', Tahoma, sans-serif";
+
+            let bubbleX = isRight ? (canvasWidth - bubbleW - marginSide) : marginSide;
+
+            c.save();
+            if (scale < 1) {
+                c.translate(bubbleX + bubbleW / 2, bubbleTopY + bubbleH / 2);
+                c.scale(scale, scale);
+                c.translate(-(bubbleX + bubbleW / 2), -(bubbleTopY + bubbleH / 2));
+            }
+
+            // Bubble background color
+            const isDark = appSettings.theme === 'dark_telegram';
+            if (isRight) {
+                c.fillStyle = isDark ? '#2b5278' : '#effdde';
+            } else {
+                c.fillStyle = isDark ? '#182533' : '#ffffff';
+            }
+
+            c.shadowColor = 'rgba(0, 0, 0, 0.08)';
+            c.shadowBlur = 4;
+            c.shadowOffsetY = 1;
+
+            c.beginPath();
+            c.roundRect(bubbleX, bubbleTopY, bubbleW, bubbleH, 16);
+            c.fill();
+            c.shadowBlur = 0;
+
+            // Render Media if attached
+            let contentStartY = bubbleTopY + 10;
+            if (layout.hasMedia && msg.mediaImg) {
+                const mediaW = bubbleW - 10;
+                const mediaAspect = msg.mediaImg.height / msg.mediaImg.width;
+                const mediaH = Math.round(mediaW * Math.min(1.3, Math.max(0.56, mediaAspect)));
+                const mediaX = bubbleX + 5;
+                const mediaY = bubbleTopY + 5;
+
+                c.save();
+                c.beginPath();
+                c.roundRect(mediaX, mediaY, mediaW, mediaH, 13);
+                c.clip();
+                c.drawImage(msg.mediaImg, mediaX, mediaY, mediaW, mediaH);
+
+                if (msg.mediaType === 'video') {
+                    c.fillStyle = 'rgba(0, 0, 0, 0.42)';
+                    c.fillRect(mediaX, mediaY, mediaW, mediaH);
+
+                    // Play circle
+                    c.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    c.beginPath();
+                    c.arc(mediaX + mediaW / 2, mediaY + mediaH / 2, 28, 0, Math.PI * 2);
+                    c.fill();
+                    c.fillStyle = '#ffffff';
+                    c.beginPath();
+                    c.moveTo(mediaX + mediaW / 2 - 8, mediaY + mediaH / 2 - 12);
+                    c.lineTo(mediaX + mediaW / 2 + 12, mediaY + mediaH / 2);
+                    c.lineTo(mediaX + mediaW / 2 - 8, mediaY + mediaH / 2 + 12);
+                    c.closePath();
+                    c.fill();
+
+                    // Duration pill top-left
+                    c.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                    c.beginPath();
+                    c.roundRect(mediaX + 10, mediaY + 10, 56, 24, 12);
+                    c.fill();
+                    c.fillStyle = '#ffffff';
+                    c.font = `600 13px 'Inter', 'Segoe UI', monospace`;
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    c.fillText(msg.mediaDuration || '0:18', mediaX + 38, mediaY + 22);
+                }
+                c.restore();
+
+                contentStartY = mediaY + mediaH + 10;
+
+                if (!layout.hasText) {
+                    // Dark pill overlay for time & checkmarks at bottom-right of media
+                    const pillW = isRight ? 105 : 75;
+                    const pillH = 26;
+                    const pillX = mediaX + mediaW - pillW - 8;
+                    const pillY = mediaY + mediaH - pillH - 8;
+
+                    c.fillStyle = 'rgba(0, 0, 0, 0.52)';
+                    c.beginPath();
+                    c.roundRect(pillX, pillY, pillW, pillH, 13);
+                    c.fill();
+
+                    c.fillStyle = '#ffffff';
+                    c.font = `400 13px 'Inter', 'Segoe UI', sans-serif`;
+                    c.textAlign = 'right';
+                    c.textBaseline = 'middle';
+                    c.fillText(msg.time || '3:45 PM', pillX + pillW - (isRight ? 26 : 10), pillY + 13);
+
+                    if (isRight) {
+                        drawCheckmarks(c, pillX + 12, pillY + 13, '#4ade80');
+                    }
+                }
+            }
+
+            // Render Reply Box inside bubble if present
+            let textStartY = contentStartY + 4;
+            if (layout.hasReply) {
+                const replyX = bubbleX + 10;
+                const replyY = contentStartY;
+                const replyW = bubbleW - 20;
+                const replyH = 44;
+
+                c.fillStyle = isRight ? 'rgba(74, 222, 128, 0.15)' : 'rgba(56, 189, 248, 0.12)';
+                c.beginPath();
+                c.roundRect(replyX, replyY, replyW, replyH, 8);
+                c.fill();
+
+                c.fillStyle = isRight ? '#15803d' : '#0284c7';
+                c.fillRect(replyX, replyY, 3.5, replyH);
+
+                c.fillStyle = isRight ? '#15803d' : '#0284c7';
+                c.font = `700 13.5px ${persianFont}`;
+                c.textAlign = 'right';
+                c.direction = 'rtl';
+                const activeContactName = (appSettings.contactName || 'Peyman Mohammadian').trim();
+                c.fillText(msg.replyName || activeContactName, replyX + replyW - 10, replyY + 17);
+
+                c.fillStyle = isDark ? '#94a3b8' : '#64748b';
+                c.font = `400 13px ${persianFont}`;
+                c.fillText(msg.replyText || '', replyX + replyW - 10, replyY + 35);
+
+                textStartY = replyY + replyH + 10;
+            }
+
+            // Render Text / Jumbomojis (both for pure text and media with caption)
+            if (layout.hasText) {
+                const fontSize = layout.fontSize || Number(appSettings.fontSize) || 22;
+                const lineHeight = layout.lineHeight || Math.round(fontSize * 1.48);
+
+                if (layout.isJumbomoji && !layout.hasMedia) {
+                    drawRichLineWithTelegramEmojis(c, msg.text, bubbleX + bubbleW - 14, bubbleX + 14, textStartY + 44, 38, persianFont, '#000000', false);
+                } else {
+                    let currentY = textStartY + Math.round(fontSize * 0.92);
+                    const rightEdge = bubbleX + bubbleW - 15;
+                    const leftEdge = bubbleX + 15;
+                    const textColor = isDark ? '#f1f5f9' : '#000000';
+
+                    layout.textLines.forEach(lineStr => {
+                        drawRichLineWithTelegramEmojis(c, lineStr, rightEdge, leftEdge, currentY, fontSize, persianFont, textColor, false);
+                        currentY += lineHeight;
+                    });
+                }
+            }
+
+            // Render Time & Checkmarks for text messages (with generous vertical spacing below text)
+            if (!layout.hasMedia || layout.hasText) {
+                const timeStr = msg.time || '3:45 PM';
+                c.font = `400 12px 'Inter', 'Segoe UI', sans-serif`;
+                const timeW = c.measureText(timeStr).width;
+                const timeX = bubbleX + bubbleW - 14;
+                const timeY = bubbleTopY + bubbleH - 9;
+
+                c.fillStyle = isDark ? '#8a9ba8' : '#85909a';
+                c.textAlign = 'right';
+                c.direction = 'ltr';
+                c.fillText(timeStr, timeX, timeY);
+
+                if (isRight) {
+                    drawCheckmarks(c, timeX - timeW - 20, timeY - 4, '#4fae4e');
+                }
+            }
+
+            c.restore();
+        }
+
+        function drawTypingIndicatorBubble(c, typingSide, bubbleTopY, canvasWidth, timeMs) {
+            if (!typingSide) return;
+            const isRight = typingSide === 'right';
+            const bubbleW = 85;
+            const bubbleH = 42;
+            const marginSide = 18;
+            const bubbleX = isRight ? (canvasWidth - bubbleW - marginSide) : marginSide;
+            const isDark = appSettings.theme === 'dark_telegram';
+
+            c.save();
+            c.fillStyle = isDark ? '#182533' : '#ffffff';
+            c.shadowColor = 'rgba(0, 0, 0, 0.08)';
+            c.shadowBlur = 4;
+            c.shadowOffsetY = 1;
+            c.beginPath();
+            c.roundRect(bubbleX, bubbleTopY, bubbleW, bubbleH, 16);
+            c.fill();
+            c.shadowBlur = 0;
+
+            const dotBaseX = bubbleX + 22;
+            const dotBaseY = bubbleTopY + 21;
+            for (let i = 0; i < 3; i++) {
+                const pulse = 0.3 + 0.7 * Math.abs(Math.sin((timeMs / 180) - i * 0.9));
+                c.fillStyle = isDark ? `rgba(148, 163, 184, ${pulse})` : `rgba(100, 116, 139, ${pulse})`;
+                c.beginPath();
+                c.arc(dotBaseX + (i * 18), dotBaseY, 3.8, 0, Math.PI * 2);
+                c.fill();
+            }
+            c.restore();
+        }
+
+        function drawTelegramTopHeader(c, width, isTypingLeft, timeMs = 0) {
+            const isDark = appSettings.theme === 'dark_telegram';
+            const headerH = 92;
+
+            c.save();
+            c.fillStyle = isDark ? '#1f2c3a' : '#517da2';
+            c.shadowColor = 'rgba(0, 0, 0, 0.18)';
+            c.shadowBlur = 6;
+            c.shadowOffsetY = 2;
+            c.fillRect(0, 0, width, headerH);
+            c.shadowBlur = 0;
+            c.shadowOffsetY = 0;
+
+            c.strokeStyle = '#ffffff';
+            c.lineWidth = 3.2;
+            c.lineCap = 'round';
+            c.lineJoin = 'round';
+            const arrowCenterX = 46;
+            const arrowCenterY = 46;
+            c.beginPath();
+            c.moveTo(arrowCenterX + 12, arrowCenterY);
+            c.lineTo(arrowCenterX - 12, arrowCenterY);
+            c.moveTo(arrowCenterX - 2, arrowCenterY - 11);
+            c.lineTo(arrowCenterX - 12, arrowCenterY);
+            c.lineTo(arrowCenterX - 2, arrowCenterY + 11);
+            c.stroke();
+
+            const avX = 122;
+            const avY = 46;
+            const avR = 30;
+
+            c.save();
+            c.beginPath();
+            c.arc(avX, avY, avR, 0, Math.PI * 2);
+            c.closePath();
+            c.clip();
+
+            if (appSettings.contactAvatarImg) {
+                const img = appSettings.contactAvatarImg;
+                const scale = Math.max((avR * 2) / img.width, (avR * 2) / img.height);
+                const dw = img.width * scale;
+                const dh = img.height * scale;
+                c.drawImage(img, avX - dw / 2, avY - dh / 2, dw, dh);
+            } else {
+                const grad = c.createLinearGradient(avX - avR, avY - avR, avX + avR, avY + avR);
+                grad.addColorStop(0, '#f59e0b');
+                grad.addColorStop(1, '#b45309');
+                c.fillStyle = grad;
+                c.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
+
+                const nameStr = (appSettings.contactName || 'P').trim();
+                const initial = nameStr.charAt(0).toUpperCase();
+                c.fillStyle = '#ffffff';
+                c.font = `700 26px 'Segoe UI', 'Inter', sans-serif`;
+                c.textAlign = 'center';
+                c.textBaseline = 'middle';
+                c.fillText(initial, avX, avY + 1);
+            }
+            c.restore();
+
+            c.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            c.lineWidth = 2;
+            c.beginPath();
+            c.arc(avX, avY, avR, 0, Math.PI * 2);
+            c.stroke();
+
+            const textStartX = 170;
+            const nameStr = (appSettings.contactName || 'Peyman Mohammadian').trim();
+            c.textBaseline = 'alphabetic';
+            c.textAlign = 'left';
+            c.direction = 'ltr';
+            c.fillStyle = '#ffffff';
+            c.font = `600 24px 'Segoe UI', 'Inter', Tahoma, sans-serif`;
+            c.fillText(nameStr, textStartX, 39);
+
+            c.fillStyle = '#d4e6f7';
+            c.font = `400 19.5px 'Segoe UI', 'Inter', Tahoma, sans-serif`;
+
+            if (isTypingLeft) {
+                const dotBaseX = textStartX + 4;
+                const dotBaseY = 64;
+                for (let i = 0; i < 3; i++) {
+                    const pulse = 0.45 + 0.55 * Math.sin((timeMs / 180) - i * 1.1);
+                    const radius = 3.2 + (pulse * 0.9);
+                    c.save();
+                    c.fillStyle = `rgba(255, 255, 255, ${0.5 + pulse * 0.5})`;
+                    c.beginPath();
+                    c.arc(dotBaseX + i * 10, dotBaseY, radius, 0, Math.PI * 2);
+                    c.fill();
+                    c.restore();
+                }
+                c.fillStyle = '#d8ebff';
+                c.fillText(`${nameStr} is typing`, dotBaseX + 34, 70);
+            } else {
+                c.fillStyle = '#d4e6f7';
+                c.fillText('online', textStartX, 70);
+            }
+
+            const menuX = width - 38;
+            c.fillStyle = '#ffffff';
+            [32, 46, 60].forEach(dy => {
+                c.beginPath();
+                c.arc(menuX, dy, 3.3, 0, Math.PI * 2);
+                c.fill();
+            });
+
+            c.restore();
+        }
+
+        function drawTelegramBottomChatBar(c, width, height) {
+            const isDark = appSettings.theme === 'dark_telegram';
+            const barH = 74;
+            const barY = height - barH;
+
+            c.save();
+            c.fillStyle = isDark ? '#17212b' : '#ffffff';
+            c.fillRect(0, barY, width, barH);
+
+            c.strokeStyle = isDark ? '#0f172a' : '#e2e5e9';
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.moveTo(0, barY);
+            c.lineTo(width, barY);
+            c.stroke();
+
+            const centerY = barY + barH / 2;
+            const iconColor = isDark ? '#6c7f93' : '#8e959b';
+
+            const smileX = 48;
+            c.strokeStyle = iconColor;
+            c.lineWidth = 2.8;
+            c.beginPath();
+            c.arc(smileX, centerY, 18, 0, Math.PI * 2);
+            c.stroke();
+
+            c.fillStyle = iconColor;
+            c.beginPath();
+            c.arc(smileX - 6.5, centerY - 4.5, 2.3, 0, Math.PI * 2);
+            c.arc(smileX + 6.5, centerY - 4.5, 2.3, 0, Math.PI * 2);
+            c.fill();
+
+            c.beginPath();
+            c.arc(smileX, centerY + 1, 9.5, 0.15 * Math.PI, 0.85 * Math.PI, false);
+            c.stroke();
+
+            const textX = 96;
+            c.strokeStyle = '#4ea4f5';
+            c.lineWidth = 2.6;
+            c.beginPath();
+            c.moveTo(textX, centerY - 16);
+            c.lineTo(textX, centerY + 16);
+            c.stroke();
+
+            c.fillStyle = isDark ? '#6c7f93' : '#a0a7ae';
+            c.font = `400 25px 'Segoe UI', 'Inter', Tahoma, sans-serif`;
+            c.textAlign = 'left';
+            c.textBaseline = 'middle';
+            c.direction = 'ltr';
+            c.fillText('Message', textX + 4, centerY + 1);
+
+            const clipX = width - 115;
+            c.save();
+            c.translate(clipX, centerY);
+            c.rotate(0.72);
+            c.strokeStyle = iconColor;
+            c.lineWidth = 2.7;
+            c.lineCap = 'round';
+            c.beginPath();
+            c.moveTo(-6, -6);
+            c.lineTo(-6, 11);
+            c.arc(0, 11, 6, Math.PI, 0, true);
+            c.lineTo(6, -10);
+            c.arc(1.5, -10, 4.5, 0, Math.PI, true);
+            c.lineTo(-3, 8);
+            c.arc(0, 8, 3, Math.PI, 0, true);
+            c.lineTo(3, -5);
+            c.stroke();
+            c.restore();
+
+            const micX = width - 46;
+            c.save();
+            c.strokeStyle = iconColor;
+            c.lineWidth = 2.7;
+            c.lineCap = 'round';
+            c.beginPath();
+            c.roundRect(micX - 6, centerY - 16, 12, 20, 6);
+            c.stroke();
+            c.beginPath();
+            c.arc(micX, centerY - 3, 12.5, 0, Math.PI, false);
+            c.stroke();
+            c.beginPath();
+            c.moveTo(micX, centerY + 9.5);
+            c.lineTo(micX, centerY + 16);
+            c.stroke();
+            c.restore();
+
+            c.restore();
+        }
+
+        function getMessageDurationMs(msg) {
+            const sec = parseFloat(msg && msg.delaySec);
+            if (!isNaN(sec) && sec >= 0.2) {
+                return Math.round(sec * 1000);
+            }
+            return appSettings.msgIntervalMs || 1500;
+        }
+
+        function buildTimelineSchedule() {
+            const introLead = 450;
+            let cursor = introLead;
+            const schedule = [];
+            for (let i = 0; i < messages.length; i++) {
+                const dur = getMessageDurationMs(messages[i]);
+                schedule.push({
+                    index: i,
+                    startMs: cursor,
+                    durationMs: dur,
+                    endMs: cursor + dur
+                });
+                cursor += dur;
+            }
+            return {
+                introLead,
+                schedule,
+                totalMessagesEndMs: cursor,
+                totalDurationMs: cursor + 1300
+            };
+        }
+
+        function renderChatFrame(timelineMs = null) {
+            const W = canvas.width;
+            const H = canvas.height;
+
+            ctx.clearRect(0, 0, W, H);
+            drawTelegramBackground(ctx, W, H);
+
+            const hasHeaderAndBar = appSettings.headerMode === 'with_header';
+            const headerH = hasHeaderAndBar ? 92 : 0;
+            const bottomBarH = hasHeaderAndBar ? 74 : 0;
+            const bottomInset = bottomBarH + 18;
+            const gapBetweenBubbles = 12;
+
+            const layouts = messages.map(m => measureAndLayoutBubble(ctx, m, W));
+
+            let activeCount = messages.length;
+            let newestPopProgress = 1;
+            let typingSide = null;
+
+            if (timelineMs !== null) {
+                const { introLead, schedule } = buildTimelineSchedule();
+
+                if (timelineMs < introLead) {
+                    activeCount = 0;
+                    if (appSettings.showTyping && messages.length > 0 && timelineMs > 100) {
+                        typingSide = messages[0].side;
+                    }
+                } else {
+                    activeCount = 0;
+                    for (let i = 0; i < schedule.length; i++) {
+                        const slot = schedule[i];
+                        if (timelineMs >= slot.startMs) {
+                            activeCount = i + 1;
+                            const withinStep = timelineMs - slot.startMs;
+
+                            if (timelineMs < slot.endMs) {
+                                const popDur = 260;
+                                if (withinStep < popDur) {
+                                    const t = withinStep / popDur;
+                                    newestPopProgress = 1 - Math.pow(1 - t, 3);
+                                } else {
+                                    newestPopProgress = 1;
+                                }
+
+                                if (appSettings.showTyping && i + 1 < messages.length) {
+                                    const typingStartOffset = Math.max(250, slot.durationMs * 0.35);
+                                    if (withinStep > typingStartOffset) {
+                                        typingSide = messages[i + 1].side;
+                                    }
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            const showBubbleTyping = Boolean(typingSide && !hasHeaderAndBar);
+            let messagesStackH = 0;
+            for (let i = 0; i < activeCount; i++) {
+                messagesStackH += layouts[i].bubbleH + gapBetweenBubbles;
+            }
+            if (showBubbleTyping) {
+                messagesStackH += 56;
+            }
+            if (messagesStackH > 0) {
+                messagesStackH -= gapBetweenBubbles;
+            }
+
+            const bottomY = H - bottomInset;
+            const desiredTopY = bottomY - messagesStackH;
+
+            if (timelineMs === null || animState.scrollY === null) {
+                animState.scrollY = desiredTopY;
+            } else {
+                animState.scrollY += (desiredTopY - animState.scrollY) * 0.25;
+            }
+
+            ctx.save();
+            if (hasHeaderAndBar) {
+                ctx.beginPath();
+                ctx.rect(0, headerH, W, H - headerH - bottomBarH);
+                ctx.clip();
+            }
+
+            let curY = animState.scrollY;
+            for (let i = 0; i < activeCount; i++) {
+                const scale = (timelineMs !== null && i === activeCount - 1) ? newestPopProgress : 1;
+                if (curY + layouts[i].bubbleH > -50 && curY < H + 50) {
+                    drawSingleBubble(ctx, messages[i], layouts[i], curY, W, scale);
+                }
+                curY += layouts[i].bubbleH + gapBetweenBubbles;
+            }
+
+            if (showBubbleTyping) {
+                drawTypingIndicatorBubble(ctx, typingSide, curY, W, timelineMs || performance.now());
+            }
+
+            ctx.restore();
+
+            if (hasHeaderAndBar) {
+                drawTelegramTopHeader(ctx, W, typingSide === 'left', timelineMs || performance.now());
+                drawTelegramBottomChatBar(ctx, W, H);
+            }
+
+            updatePlaybackProgressUI(activeCount, timelineMs);
+            return activeCount;
+        }
+
+        function getTotalAnimationDuration() {
+            return buildTimelineSchedule().totalDurationMs;
+        }
+
+        function updatePlaybackProgressUI(visibleCount, timelineMs) {
+            const label = document.getElementById('playbackStepLabel');
+            const bar = document.getElementById('playbackProgressBar');
+            if (label) {
+                label.textContent = `نمایش ${visibleCount} از ${messages.length} پیام`;
+            }
+            if (bar) {
+                if (timelineMs === null) {
+                    bar.style.width = `${messages.length ? (visibleCount / messages.length) * 100 : 100}%`;
+                } else {
+                    const total = getTotalAnimationDuration();
+                    const pct = Math.min(100, Math.max(0, (timelineMs / total) * 100));
+                    bar.style.width = `${pct}%`;
+                }
+            }
+        }
+
+        function startPreviewAnimation() {
+            if (animState.isExporting) return;
+            stopPreviewAnimation();
+
+            ensureAudioContext();
+            animState.isPlaying = true;
+            animState.mode = 'timeline';
+            animState.startTime = performance.now();
+            animState.scrollY = null;
+            animState.lastTriggeredSoundIndex = -1;
+
+            updatePlayButtonIcons(true);
+            document.getElementById('previewStatusText').textContent = 'در حال پخش انیمیشن چت...';
+
+            function loop(now) {
+                if (!animState.isPlaying) return;
+                const elapsed = now - animState.startTime;
+                const totalDur = getTotalAnimationDuration();
+
+                const visibleCount = renderChatFrame(elapsed);
+
+                if (visibleCount > 0 && visibleCount - 1 > animState.lastTriggeredSoundIndex) {
+                    animState.lastTriggeredSoundIndex = visibleCount - 1;
+                    playTelegramPopSound(messages[visibleCount - 1].side);
+                }
+
+                if (elapsed < totalDur) {
+                    animState.rafId = requestAnimationFrame(loop);
+                } else {
+                    stopPreviewAnimation();
+                    showStaticFullChat();
+                }
+            }
+
+            animState.rafId = requestAnimationFrame(loop);
+        }
+
+        function stopPreviewAnimation() {
+            animState.isPlaying = false;
+            if (animState.rafId) {
+                cancelAnimationFrame(animState.rafId);
+                animState.rafId = null;
+            }
+            updatePlayButtonIcons(false);
+            document.getElementById('previewStatusText').textContent = 'پیش‌نمایش زنده بوم (Canvas)';
+        }
+
+        function togglePreviewPlayPause() {
+            if (animState.isPlaying) {
+                stopPreviewAnimation();
+            } else {
+                startPreviewAnimation();
+            }
+        }
+
+        function updatePlayButtonIcons(playing) {
+            const btnMain = document.getElementById('btnPlayPreview');
+            const btnSmall = document.getElementById('btnTogglePlaySmall');
+            if (playing) {
+                btnMain.innerHTML = `<i class="fa-solid fa-stop text-rose-400"></i><span>توقف پخش</span>`;
+                btnSmall.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+            } else {
+                btnMain.innerHTML = `<i class="fa-solid fa-play text-emerald-400"></i><span>پخش انیمیشن چت</span>`;
+                btnSmall.innerHTML = `<i class="fa-solid fa-play"></i>`;
+            }
+        }
+
+        function showStaticFullChat() {
+            stopPreviewAnimation();
+            animState.mode = 'static';
+            animState.visibleCount = messages.length;
+            renderChatFrame(null);
+        }
+
+        function stepBackward() {
+            stopPreviewAnimation();
+            if (messages.length === 0) return;
+            animState.visibleCount = Math.max(1, (animState.visibleCount || messages.length) - 1);
+            const { schedule } = buildTimelineSchedule();
+            const targetSlot = schedule[animState.visibleCount - 1];
+            const targetTime = targetSlot ? targetSlot.startMs + 280 : 450;
+            renderChatFrame(targetTime);
+        }
+
+        function stepForward() {
+            stopPreviewAnimation();
+            if (messages.length === 0) return;
+            animState.visibleCount = Math.min(messages.length, (animState.visibleCount || 0) + 1);
+            const { schedule } = buildTimelineSchedule();
+            const targetSlot = schedule[animState.visibleCount - 1];
+            const targetTime = targetSlot ? targetSlot.startMs + 280 : 450;
+            renderChatFrame(targetTime);
+        }
+
+        async function exportChatVideoMP4() {
+            if (animState.isExporting || messages.length === 0) return;
+            stopPreviewAnimation();
+            animState.isExporting = true;
+
+            const modal = document.getElementById('exportModal');
+            const progressView = document.getElementById('exportProgressView');
+            const resultView = document.getElementById('exportResultView');
+            const progressFill = document.getElementById('exportProgressFill');
+            const percentText = document.getElementById('exportPercentText');
+            const modalTitle = document.getElementById('exportModalTitle');
+            const recBadge = document.getElementById('recordingBadge');
+
+            modal.classList.remove('hidden');
+            progressView.classList.remove('hidden');
+            resultView.classList.add('hidden');
+            recBadge.classList.remove('hidden');
+            modalTitle.textContent = 'در حال رندر و ساخت فایل MP4...';
+            progressFill.style.width = '0%';
+            percentText.textContent = '0%';
+
+            try {
+                const canUseWebCodecsMp4 = (typeof window.VideoEncoder !== 'undefined' && typeof window.Mp4Muxer !== 'undefined');
+
+                if (canUseWebCodecsMp4) {
+                    await renderWithWebCodecsMp4(progressFill, percentText);
+                } else {
+                    await renderWithMediaRecorder(progressFill, percentText);
+                }
+            } catch (err) {
+                console.warn('WebCodecs fallback to MediaRecorder:', err);
+                try {
+                    await renderWithMediaRecorder(progressFill, percentText);
+                } catch (fallbackErr) {
+                    console.error('Export error:', fallbackErr);
+                }
+            } finally {
+                animState.isExporting = false;
+                recBadge.classList.add('hidden');
+                showStaticFullChat();
+            }
+        }
+
+        async function renderWithWebCodecsMp4(progressFill, percentText) {
+            const W = canvas.width;
+            const H = canvas.height;
+            const fps = 30;
+            const totalDurationMs = getTotalAnimationDuration();
+            const totalFrames = Math.ceil((totalDurationMs / 1000) * fps);
+            const sampleRate = 48000;
+
+            // Check if AudioEncoder with AAC is supported so we can mux a real audio track into the MP4
+            let useWebCodecsAudio = false;
+            if (typeof window.AudioEncoder !== 'undefined' && typeof window.AudioData !== 'undefined') {
+                try {
+                    const support = await AudioEncoder.isConfigSupported({
+                        codec: 'mp4a.40.2',
+                        sampleRate: sampleRate,
+                        numberOfChannels: 1,
+                        bitrate: 128000
+                    });
+                    useWebCodecsAudio = Boolean(support && support.supported);
+                } catch (e) {
+                    useWebCodecsAudio = false;
+                }
+            }
+
+            // If AudioEncoder AAC isn't available and user wants sound, use real-time MediaRecorder with audio stream
+            if (!useWebCodecsAudio && appSettings.soundEffects) {
+                await renderWithMediaRecorder(progressFill, percentText);
+                return;
+            }
+
+            const muxerOptions = {
+                target: new Mp4Muxer.ArrayBufferTarget(),
+                video: {
+                    codec: 'avc',
+                    width: W,
+                    height: H
+                },
+                fastStart: 'in-memory'
+            };
+
+            if (useWebCodecsAudio) {
+                muxerOptions.audio = {
+                    codec: 'aac',
+                    sampleRate: sampleRate,
+                    numberOfChannels: 1
+                };
+            }
+
+            const muxer = new Mp4Muxer.Muxer(muxerOptions);
+
+            const videoEncoder = new VideoEncoder({
+                output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+                error: (e) => console.error('VideoEncoder error:', e)
+            });
+
+            videoEncoder.configure({
+                codec: 'avc1.42001f',
+                width: W,
+                height: H,
+                bitrate: 3_500_000,
+                framerate: fps
+            });
+
+            let audioEncoder = null;
+            if (useWebCodecsAudio) {
+                audioEncoder = new AudioEncoder({
+                    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+                    error: (e) => console.error('AudioEncoder error:', e)
+                });
+                audioEncoder.configure({
+                    codec: 'mp4a.40.2',
+                    sampleRate: sampleRate,
+                    numberOfChannels: 1,
+                    bitrate: 128000
+                });
+
+                // Encode synthesized Telegram pop sound effects across the entire timeline
+                const fullAudioPcm = synthesizeFullChatAudioTrack(totalDurationMs, sampleRate);
+                const chunkFrames = 1024;
+                for (let offset = 0; offset < fullAudioPcm.length; offset += chunkFrames) {
+                    const slice = fullAudioPcm.subarray(offset, Math.min(offset + chunkFrames, fullAudioPcm.length));
+                    const timestampUs = Math.round((offset / sampleRate) * 1_000_000);
+                    const audioData = new AudioData({
+                        format: 'f32',
+                        sampleRate: sampleRate,
+                        numberOfFrames: slice.length,
+                        numberOfChannels: 1,
+                        timestamp: timestampUs,
+                        data: slice
+                    });
+                    audioEncoder.encode(audioData);
+                    audioData.close();
+                }
+            }
+
+            animState.scrollY = null;
+
+            for (let frameIdx = 0; frameIdx <= totalFrames; frameIdx++) {
+                const timeMs = (frameIdx / fps) * 1000;
+                renderChatFrame(timeMs);
+
+                const timestampUs = Math.round((frameIdx / fps) * 1_000_000);
+                const videoFrame = new VideoFrame(canvas, { timestamp: timestampUs });
+                videoEncoder.encode(videoFrame, { keyFrame: frameIdx % 30 === 0 });
+                videoFrame.close();
+
+                if (frameIdx % 4 === 0 || frameIdx === totalFrames) {
+                    const pct = Math.round((frameIdx / totalFrames) * 100);
+                    progressFill.style.width = `${pct}%`;
+                    percentText.textContent = `${pct}%`;
+                    await new Promise(r => setTimeout(r, 0));
+                }
+            }
+
+            await videoEncoder.flush();
+            if (audioEncoder) {
+                await audioEncoder.flush();
+            }
+            muxer.finalize();
+
+            const { buffer } = muxer.target;
+            const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
+            presentExportedVideo(mp4Blob, 'mp4');
+        }
+
+        async function renderWithMediaRecorder(progressFill, percentText) {
+            ensureAudioContext();
+            const canvasStream = canvas.captureStream(60);
+
+            if (audioDest) {
+                const audioTracks = audioDest.stream.getAudioTracks();
+                audioTracks.forEach(t => canvasStream.addTrack(t));
+            }
+
+            const mimeCandidates = [
+                'video/mp4;codecs=avc1,mp4a.40.2',
+                'video/mp4;codecs=avc1',
+                'video/mp4',
+                'video/webm;codecs=h264',
+                'video/webm;codecs=vp9',
+                'video/webm'
+            ];
+
+            let chosenMime = '';
+            for (const candidate of mimeCandidates) {
+                if (window.MediaRecorder && MediaRecorder.isTypeSupported(candidate)) {
+                    chosenMime = candidate;
+                    break;
+                }
+            }
+
+            const recorder = chosenMime
+                ? new MediaRecorder(canvasStream, { mimeType: chosenMime, videoBitsPerSecond: 3500000 })
+                : new MediaRecorder(canvasStream);
+
+            const chunks = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            const recordingFinished = new Promise((resolve) => {
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: chosenMime || 'video/mp4' });
+                    resolve(blob);
+                };
+            });
+
+            animState.scrollY = null;
+            animState.lastTriggeredSoundIndex = -1;
+            const totalDur = getTotalAnimationDuration();
+            const startT = performance.now();
+
+            recorder.start(100);
+
+            await new Promise((resolveAnim) => {
+                function step(now) {
+                    const elapsed = now - startT;
+                    const visibleCount = renderChatFrame(elapsed);
+
+                    if (visibleCount > 0 && visibleCount - 1 > animState.lastTriggeredSoundIndex) {
+                        animState.lastTriggeredSoundIndex = visibleCount - 1;
+                        playTelegramPopSound(messages[visibleCount - 1].side);
+                    }
+
+                    const pct = Math.min(100, Math.round((elapsed / totalDur) * 100));
+                    progressFill.style.width = `${pct}%`;
+                    percentText.textContent = `${pct}%`;
+
+                    if (elapsed < totalDur) {
+                        requestAnimationFrame(step);
+                    } else {
+                        resolveAnim();
+                    }
+                }
+                requestAnimationFrame(step);
+            });
+
+            recorder.stop();
+            const videoBlob = await recordingFinished;
+            presentExportedVideo(videoBlob, 'mp4');
+        }
+
+        function presentExportedVideo(blob, ext = 'mp4') {
+            const progressView = document.getElementById('exportProgressView');
+            const resultView = document.getElementById('exportResultView');
+            const modalTitle = document.getElementById('exportModalTitle');
+            const videoEl = document.getElementById('exportedVideoPreview');
+            const downloadLink = document.getElementById('downloadVideoLink');
+
+            progressView.classList.add('hidden');
+            resultView.classList.remove('hidden');
+            modalTitle.textContent = 'ویدیو چت تلگرام آماده شد!';
+
+            const url = URL.createObjectURL(blob);
+            videoEl.src = url;
+            videoEl.muted = false;
+            videoEl.volume = 1.0;
+            videoEl.play().catch(() => {});
+
+            downloadLink.href = url;
+            downloadLink.download = `telegram-chat-${Date.now()}.${ext}`;
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('exportModal');
+            const videoEl = document.getElementById('exportedVideoPreview');
+            if (videoEl) videoEl.pause();
+            modal.classList.add('hidden');
+        }
+
+        function downloadSnapshotPNG() {
+            showStaticFullChat();
+            const dataUrl = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `telegram-chat-image-${Date.now()}.png`;
+            a.click();
+        }
+
+        function selectComposerSender(side) {
+            composerSide = side;
+            const tabLeft = document.getElementById('tabSenderLeft');
+            const tabRight = document.getElementById('tabSenderRight');
+
+            if (side === 'left') {
+                tabLeft.className = 'py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-white text-slate-900 shadow';
+                tabRight.className = 'py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+            } else {
+                tabRight.className = 'py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 bg-emerald-600 text-white shadow';
+                tabLeft.className = 'py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+            }
+        }
+
+        function toggleNewReplyBox() {
+            const checked = document.getElementById('newMsgHasReply').checked;
+            const fields = document.getElementById('newReplyFields');
+            const select = document.getElementById('quickReplySelect');
+            if (checked) {
+                fields.classList.remove('hidden');
+                select.classList.remove('hidden');
+                populateQuickReplySelect();
+            } else {
+                fields.classList.add('hidden');
+                select.classList.add('hidden');
+            }
+        }
+
+        function populateQuickReplySelect() {
+            const select = document.getElementById('quickReplySelect');
+            select.innerHTML = `<option value="">-- انتخاب سریع از پیام‌های قبلی --</option>`;
+            messages.forEach((m, idx) => {
+                const shortText = m.text.length > 28 ? m.text.slice(0, 28) + '...' : m.text;
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.textContent = `${idx + 1}. ${shortText}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function fillReplyFromExisting() {
+            const idx = document.getElementById('quickReplySelect').value;
+            if (idx === '') return;
+            const targetMsg = messages[Number(idx)];
+            if (!targetMsg) return;
+            const truncated = targetMsg.text.length > 26 ? targetMsg.text.slice(0, 26) + '...' : targetMsg.text;
+            document.getElementById('newReplyText').value = truncated;
+            document.getElementById('newReplyName').value = (appSettings.contactName || 'Peyman Mohammadian').trim();
+        }
+
+        function syncReplyNameWithHeader(newName) {
+            const headerNameInput = document.getElementById('settingContactName');
+            if (headerNameInput && newName.trim() !== '') {
+                headerNameInput.value = newName;
+                updateSettings();
+            }
+        }
+
+        function advanceClockString(timeStr) {
+            const match = String(timeStr).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+            if (!match) return timeStr;
+            let hour = parseInt(match[1], 10);
+            let min = parseInt(match[2], 10) + 2;
+            const ampm = match[3] ? match[3].toUpperCase() : 'PM';
+            if (min >= 60) {
+                min -= 60;
+                hour = (hour % 12) + 1;
+            }
+            const minPadded = min < 10 ? '0' + min : String(min);
+            return `${hour}:${minPadded} ${ampm}`;
+        }
+
+        function addMessageFromComposer(forcedSide = null) {
+            const textEl = document.getElementById('newMsgText');
+            const timeEl = document.getElementById('newMsgTime');
+            const delayEl = document.getElementById('newMsgDelay');
+            const hasReplyEl = document.getElementById('newMsgHasReply');
+            const replyNameEl = document.getElementById('newReplyName');
+            const replyTextEl = document.getElementById('newReplyText');
+            const vidDurEl = document.getElementById('composerVideoDurationInput');
+
+            const text = textEl.value.trim();
+            const hasMediaAttachment = Boolean(composerMediaState.type && composerMediaState.imgElement);
+
+            if (!text && !hasMediaAttachment) {
+                textEl.focus();
+                return;
+            }
+
+            const side = forcedSide || composerSide;
+            const time = timeEl.value.trim() || '3:45 PM';
+            const delaySec = Math.max(0.3, parseFloat(delayEl.value) || 1.5);
+            const hasReply = hasReplyEl.checked;
+
+            messages.push({
+                id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                side,
+                text,
+                time,
+                delaySec,
+                replyName: hasReply ? replyNameEl.value.trim() : '',
+                replyText: hasReply ? replyTextEl.value.trim() : '',
+                mediaType: hasMediaAttachment ? composerMediaState.type : null,
+                mediaImg: hasMediaAttachment ? composerMediaState.imgElement : null,
+                mediaVideo: hasMediaAttachment ? composerMediaState.videoElement : null,
+                mediaDataUrl: hasMediaAttachment ? composerMediaState.dataUrl : null,
+                mediaDuration: hasMediaAttachment && composerMediaState.type === 'video'
+                    ? (vidDurEl.value.trim() || '0:18')
+                    : ''
+            });
+
+            textEl.value = '';
+            timeEl.value = advanceClockString(time);
+            hasReplyEl.checked = false;
+            toggleNewReplyBox();
+            clearComposerMedia();
+
+            renderMessagesListUI();
+            showStaticFullChat();
+        }
+
+        function toggleEmojiPickerPanel() {
+            const drawer = document.getElementById('emojiPickerDrawer');
+            if (drawer.classList.contains('hidden')) {
+                drawer.classList.remove('hidden');
+                renderEmojiPickerCategories();
+                renderEmojiGrid(activeEmojiCategory);
+            } else {
+                drawer.classList.add('hidden');
+            }
+        }
+
+        function renderEmojiPickerCategories() {
+            const tabsEl = document.getElementById('emojiCategoryTabs');
+            if (!tabsEl) return;
+            tabsEl.innerHTML = '';
+            Object.keys(TELEGRAM_EMOJI_CATEGORIES).forEach(catName => {
+                const isAct = catName === activeEmojiCategory;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition ${
+                    isAct ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
+                }`;
+                btn.textContent = catName;
+                btn.onclick = () => {
+                    activeEmojiCategory = catName;
+                    renderEmojiPickerCategories();
+                    renderEmojiGrid(catName);
+                };
+                tabsEl.appendChild(btn);
+            });
+        }
+
+        function renderEmojiGrid(categoryName) {
+            const grid = document.getElementById('emojiGridContainer');
+            if (!grid) return;
+            grid.innerHTML = '';
+            const list = TELEGRAM_EMOJI_CATEGORIES[categoryName] || [];
+
+            list.forEach(emojiChar => {
+                const fullCode = emojiToUnifiedCode(emojiChar);
+                const strippedCode = fullCode.replace(/-fe0f/g, '');
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center transition transform hover:scale-110';
+                btn.title = emojiChar;
+
+                const img = document.createElement('img');
+                img.src = APPLE_EMOJI_CDN + fullCode + '.png';
+                img.alt = emojiChar;
+                img.className = 'w-6 h-6 object-contain pointer-events-none';
+                img.onerror = function () {
+                    if (this.src.indexOf(strippedCode + '.png') === -1 && strippedCode !== fullCode) {
+                        this.src = APPLE_EMOJI_CDN + strippedCode + '.png';
+                    } else {
+                        this.replaceWith(document.createTextNode(emojiChar));
+                    }
+                };
+
+                btn.appendChild(img);
+                btn.onclick = () => insertEmojiIntoComposer(emojiChar);
+                grid.appendChild(btn);
+
+                getTelegramEmojiImage(emojiChar);
+            });
+        }
+
+        function insertEmojiIntoComposer(emojiChar) {
+            const input = document.getElementById('newMsgText');
+            const start = input.selectionStart || input.value.length;
+            const end = input.selectionEnd || input.value.length;
+            const text = input.value;
+            input.value = text.slice(0, start) + emojiChar + text.slice(end);
+            input.focus();
+            input.selectionStart = input.selectionEnd = start + emojiChar.length;
+        }
+
+        function formatSecondsToMMSS(sec) {
+            const s = Math.max(1, Math.round(sec || 15));
+            const mins = Math.floor(s / 60);
+            const rem = s % 60;
+            return `${mins}:${rem < 10 ? '0' + rem : rem}`;
+        }
+
+        function handleComposerMediaUpload(event, mediaType) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            if (file.type.startsWith('video/')) {
+                const videoUrl = URL.createObjectURL(file);
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.muted = true;
+                video.playsInline = true;
+                video.crossOrigin = 'anonymous';
+
+                video.onloadeddata = () => {
+                    video.currentTime = Math.min(0.5, (video.duration || 1) * 0.2);
+                };
+
+                video.onseeked = () => {
+                    const offCanvas = document.createElement('canvas');
+                    offCanvas.width = video.videoWidth || 480;
+                    offCanvas.height = video.videoHeight || 360;
+                    const offCtx = offCanvas.getContext('2d');
+                    offCtx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+                    const thumbDataUrl = offCanvas.toDataURL('image/jpeg', 0.88);
+
+                    const img = new Image();
+                    img.onload = () => {
+                        composerMediaState = {
+                            type: 'video',
+                            imgElement: img,
+                            videoElement: video,
+                            dataUrl: thumbDataUrl,
+                            durationText: formatSecondsToMMSS(video.duration || 18)
+                        };
+                        document.getElementById('composerVideoDurationInput').value = composerMediaState.durationText;
+                        updateComposerMediaPreviewUI();
+                    };
+                    img.src = thumbDataUrl;
+                };
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        composerMediaState = {
+                            type: mediaType,
+                            imgElement: img,
+                            videoElement: null,
+                            dataUrl: e.target.result,
+                            durationText: '0:18'
+                        };
+                        updateComposerMediaPreviewUI();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = '';
+        }
+
+        function attachSampleTelegramMedia(type) {
+            const off = document.createElement('canvas');
+            off.width = 640;
+            off.height = 420;
+            const c = off.getContext('2d');
+
+            const g = c.createLinearGradient(0, 0, 640, 420);
+            if (type === 'video') {
+                g.addColorStop(0, '#1e1b4b');
+                g.addColorStop(0.5, '#4338ca');
+                g.addColorStop(1, '#ec4899');
+            } else {
+                g.addColorStop(0, '#0f766e');
+                g.addColorStop(0.5, '#0284c7');
+                g.addColorStop(1, '#38bdf8');
+            }
+            c.fillStyle = g;
+            c.fillRect(0, 0, 640, 420);
+
+            c.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            c.beginPath();
+            c.arc(480, 115, 48, 0, Math.PI * 2);
+            c.fill();
+
+            c.fillStyle = 'rgba(15, 23, 42, 0.45)';
+            c.beginPath();
+            c.moveTo(0, 420);
+            c.lineTo(0, 270);
+            c.lineTo(180, 150);
+            c.lineTo(350, 290);
+            c.lineTo(490, 180);
+            c.lineTo(640, 280);
+            c.lineTo(640, 420);
+            c.closePath();
+            c.fill();
+
+            const dataUrl = off.toDataURL('image/jpeg', 0.9);
+            const img = new Image();
+            img.onload = () => {
+                composerMediaState = {
+                    type: type,
+                    imgElement: img,
+                    videoElement: null,
+                    dataUrl: dataUrl,
+                    durationText: '0:24'
+                };
+                document.getElementById('composerVideoDurationInput').value = '0:24';
+                updateComposerMediaPreviewUI();
+            };
+            img.src = dataUrl;
+        }
+
+        function updateComposerMediaPreviewUI() {
+            const box = document.getElementById('composerMediaPreviewBox');
+            const thumb = document.getElementById('composerMediaThumb');
+            const badge = document.getElementById('composerMediaTypeBadge');
+            const durRow = document.getElementById('composerVideoDurationRow');
+
+            if (!composerMediaState.type || !composerMediaState.dataUrl) {
+                box.classList.add('hidden');
+                return;
+            }
+
+            box.classList.remove('hidden');
+            thumb.src = composerMediaState.dataUrl;
+
+            if (composerMediaState.type === 'video') {
+                badge.textContent = 'ویدیو تلگرام ▶';
+                badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30';
+                durRow.classList.remove('hidden');
+            } else {
+                badge.textContent = 'عکس تلگرام 🖼';
+                badge.className = 'text-[11px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30';
+                durRow.classList.add('hidden');
+            }
+        }
+
+        function clearComposerMedia() {
+            composerMediaState = {
+                type: null,
+                imgElement: null,
+                videoElement: null,
+                dataUrl: null,
+                durationText: '0:18'
+            };
+            updateComposerMediaPreviewUI();
+        }
+
+        function changeExistingMessageMedia(index, mediaType) {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = mediaType === 'video' ? 'video/*,image/*' : 'image/*';
+            fileInput.onchange = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file || !messages[index]) return;
+
+                if (file.type.startsWith('video/')) {
+                    const url = URL.createObjectURL(file);
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.onloadeddata = () => {
+                        video.currentTime = Math.min(0.5, (video.duration || 1) * 0.2);
+                    };
+                    video.onseeked = () => {
+                        const off = document.createElement('canvas');
+                        off.width = video.videoWidth || 480;
+                        off.height = video.videoHeight || 360;
+                        off.getContext('2d').drawImage(video, 0, 0, off.width, off.height);
+                        const thumbUrl = off.toDataURL('image/jpeg', 0.85);
+                        const img = new Image();
+                        img.onload = () => {
+                            messages[index].mediaType = 'video';
+                            messages[index].mediaImg = img;
+                            messages[index].mediaVideo = video;
+                            messages[index].mediaDataUrl = thumbUrl;
+                            messages[index].mediaDuration = formatSecondsToMMSS(video.duration || 15);
+                            renderMessagesListUI();
+                            renderChatFrame(null);
+                        };
+                        img.src = thumbUrl;
+                    };
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            messages[index].mediaType = mediaType;
+                            messages[index].mediaImg = img;
+                            messages[index].mediaVideo = null;
+                            messages[index].mediaDataUrl = ev.target.result;
+                            if (mediaType === 'video' && !messages[index].mediaDuration) {
+                                messages[index].mediaDuration = '0:15';
+                            }
+                            renderMessagesListUI();
+                            renderChatFrame(null);
+                        };
+                        img.src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            fileInput.click();
+        }
+
+        function removeMessageMedia(index) {
+            if (!messages[index]) return;
+            messages[index].mediaType = null;
+            messages[index].mediaImg = null;
+            messages[index].mediaVideo = null;
+            messages[index].mediaDataUrl = null;
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function renderMessagesListUI() {
+            const container = document.getElementById('messagesListContainer');
+            const badge = document.getElementById('msgCountBadge');
+            const totalSec = (getTotalAnimationDuration() / 1000).toFixed(1);
+            badge.textContent = `${messages.length} پیام (جمع کل ویدیو: ${totalSec} ثانیه)`;
+
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 bg-slate-950/60 rounded-xl border border-dashed border-slate-800 text-slate-400 text-xs space-y-2">
+                        <i class="fa-regular fa-comment-dots text-2xl text-slate-500"></i>
+                        <p>هیچ پیامی در لیست وجود ندارد. از کادر بالا پیام جدید اضافه کنید!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '';
+            messages.forEach((msg, index) => {
+                const isRight = msg.side === 'right';
+                const hasReply = Boolean(msg.replyName || msg.replyText);
+                const msgDelay = (msg.delaySec !== undefined ? msg.delaySec : 1.5);
+
+                const card = document.createElement('div');
+                card.className = `msg-card-enter rounded-xl p-3 border transition flex flex-col gap-2 ${
+                    isRight
+                        ? 'bg-emerald-950/25 border-emerald-800/50 hover:border-emerald-700/70'
+                        : 'bg-slate-950/90 border-slate-800 hover:border-slate-700'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 text-xs font-mono flex items-center justify-center font-bold">${index + 1}</span>
+                            <button onclick="toggleMessageSide(${index})" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                                isRight
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30'
+                                    : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                            }" title="کلیک برای تغییر طرف پیام (چپ / راست)">
+                                <i class="fa-solid fa-arrows-left-right text-[10px]"></i>
+                                <span>${isRight ? 'راست (سبز ✓✓)' : 'چپ (سفید)'}</span>
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2 py-0.5" title="مدت زمان مکث بعد از این پیام تا پیام بعدی (ثانیه)">
+                                <i class="fa-regular fa-hourglass-half text-[10px] text-amber-400"></i>
+                                <span class="text-[10px] text-slate-400">مکث:</span>
+                                <input type="number" step="0.1" min="0.2" max="30" dir="ltr" value="${msgDelay}"
+                                    oninput="updateMessageDelay(${index}, this.value)"
+                                    class="w-12 bg-transparent text-[11px] font-mono text-center text-amber-300 outline-none">
+                                <span class="text-[10px] text-slate-400">ثانیه</span>
+                            </div>
+
+                            <input type="text" dir="ltr" value="${escapeHtml(msg.time)}" oninput="updateMessageField(${index}, 'time', this.value)"
+                                class="w-20 bg-slate-900 border border-slate-700/80 focus:border-emerald-500 rounded-lg px-2 py-1 text-[11px] font-mono text-center text-slate-200 outline-none" title="ساعت پیام">
+
+                            <button onclick="moveMessage(${index}, -1)" ${index === 0 ? 'disabled' : ''} class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 text-xs flex items-center justify-center" title="انتقال به بالا">
+                                <i class="fa-solid fa-chevron-up"></i>
+                            </button>
+                            <button onclick="moveMessage(${index}, 1)" ${index === messages.length - 1 ? 'disabled' : ''} class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 text-xs flex items-center justify-center" title="انتقال به پایین">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </button>
+                            <button onclick="deleteMessage(${index})" class="w-7 h-7 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-xs flex items-center justify-center" title="حذف این پیام">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input type="text" value="${escapeHtml(msg.text)}" placeholder="متن پیام یا کپشن مدیا..." oninput="updateMessageField(${index}, 'text', this.value)"
+                            class="w-full bg-slate-900/90 border border-slate-700/70 focus:border-emerald-500 rounded-lg px-3 py-1.5 text-xs sm:text-sm text-white outline-none">
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div class="flex items-center gap-1.5">
+                            ${msg.mediaType ? `
+                                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1">
+                                    <img src="${msg.mediaDataUrl || ''}" class="w-7 h-7 rounded object-cover">
+                                    <span class="text-[11px] font-semibold ${msg.mediaType === 'video' ? 'text-purple-300' : 'text-sky-300'}">
+                                        ${msg.mediaType === 'video' ? 'ویدیو تلگرام' : 'عکس تلگرام'}
+                                    </span>
+                                    ${msg.mediaType === 'video' ? `
+                                        <input type="text" dir="ltr" value="${escapeHtml(msg.mediaDuration || '0:15')}"
+                                            oninput="updateMessageField(${index}, 'mediaDuration', this.value)"
+                                            class="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-0.5 text-[10px] font-mono text-center text-purple-200 outline-none" title="مدت زمان ویدیو">
+                                    ` : ''}
+                                    <button onclick="removeMessageMedia(${index})" class="text-rose-400 hover:text-rose-300 text-xs px-1" title="حذف عکس/ویدیو">✕</button>
+                                </div>
+                            ` : `
+                                <button onclick="changeExistingMessageMedia(${index}, 'photo')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-sky-400 border border-slate-800 text-[11px] flex items-center gap-1">
+                                    <i class="fa-regular fa-image"></i>
+                                    <span>+ عکس</span>
+                                </button>
+                                <button onclick="changeExistingMessageMedia(${index}, 'video')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-purple-400 border border-slate-800 text-[11px] flex items-center gap-1">
+                                    <i class="fa-solid fa-video"></i>
+                                    <span>+ ویدیو</span>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+
+                    ${hasReply ? `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-900/60 p-2 rounded-lg border-r-2 border-emerald-500">
+                            <input type="text" value="${escapeHtml(msg.replyName)}" oninput="updateMessageField(${index}, 'replyName', this.value)"
+                                placeholder="نام در ریپلای" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-emerald-400 outline-none">
+                            <input type="text" value="${escapeHtml(msg.replyText)}" oninput="updateMessageField(${index}, 'replyText', this.value)"
+                                placeholder="متن ریپلای" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 outline-none">
+                        </div>
+                    ` : ''}
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function updateMessageField(index, field, value) {
+            if (!messages[index]) return;
+            messages[index][field] = value;
+            if (field === 'replyName' && value.trim() !== '') {
+                const headerInput = document.getElementById('settingContactName');
+                if (headerInput) {
+                    headerInput.value = value;
+                    appSettings.contactName = value;
+                }
+                const newReplyNameInput = document.getElementById('newReplyName');
+                if (newReplyNameInput) newReplyNameInput.value = value;
+            }
+            renderChatFrame(null);
+        }
+
+        function updateMessageDelay(index, value) {
+            if (!messages[index]) return;
+            const sec = Math.max(0.2, parseFloat(value) || 1.5);
+            messages[index].delaySec = sec;
+            const badge = document.getElementById('msgCountBadge');
+            if (badge) {
+                const totalSec = (getTotalAnimationDuration() / 1000).toFixed(1);
+                badge.textContent = `${messages.length} پیام (جمع کل ویدیو: ${totalSec} ثانیه)`;
+            }
+        }
+
+        function applyGlobalSpeedToAllMessages() {
+            const globalSec = parseFloat(document.getElementById('settingSpeed').value) || 1.5;
+            appSettings.msgIntervalMs = Math.round(globalSec * 1000);
+            document.getElementById('newMsgDelay').value = globalSec;
+            messages.forEach(m => {
+                m.delaySec = globalSec;
+            });
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function toggleMessageSide(index) {
+            if (!messages[index]) return;
+            messages[index].side = messages[index].side === 'left' ? 'right' : 'left';
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function moveMessage(index, delta) {
+            const target = index + delta;
+            if (target < 0 || target >= messages.length) return;
+            const temp = messages[index];
+            messages[index] = messages[target];
+            messages[target] = temp;
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function deleteMessage(index) {
+            messages.splice(index, 1);
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function clearAllMessages() {
+            stopPreviewAnimation();
+            messages = [];
+            renderMessagesListUI();
+            renderChatFrame(null);
+        }
+
+        function resetToDefaultScreenshotChat() {
+            stopPreviewAnimation();
+            messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
+            renderMessagesListUI();
+            showStaticFullChat();
+        }
+
+        function syncFontSizeControl(val) {
+            const parsed = Math.max(12, Math.min(50, parseInt(val, 10) || 22));
+            appSettings.fontSize = parsed;
+            const rangeEl = document.getElementById('settingFontSizeRange');
+            const inputEl = document.getElementById('settingFontSizeInput');
+            const badgeEl = document.getElementById('fontSizeBadge');
+            if (rangeEl) rangeEl.value = parsed;
+            if (inputEl) inputEl.value = parsed;
+            if (badgeEl) badgeEl.textContent = `${parsed}px`;
+            renderChatFrame(null);
+        }
+
+        function syncTimeSpacingControl(val) {
+            const parsed = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+            appSettings.timeGap = parsed;
+            const rangeEl = document.getElementById('settingTimeSpacingRange');
+            const inputEl = document.getElementById('settingTimeSpacingInput');
+            const badgeEl = document.getElementById('timeSpacingBadge');
+            if (rangeEl) rangeEl.value = parsed;
+            if (inputEl) inputEl.value = parsed;
+            if (badgeEl) badgeEl.textContent = `${parsed}px`;
+            renderChatFrame(null);
+        }
+
+        function updateSettings() {
+            const globalSec = parseFloat(document.getElementById('settingSpeed').value) || 1.5;
+            appSettings.msgIntervalMs = Math.round(globalSec * 1000);
+            appSettings.fontFamily = document.getElementById('settingFont').value || "'Vazirmatn', Tahoma, sans-serif";
+            appSettings.fontSize = parseInt(document.getElementById('settingFontSizeInput').value, 10) || 22;
+            appSettings.timeGap = parseInt(document.getElementById('settingTimeSpacingInput').value, 10) || 26;
+            const selectedTheme = document.getElementById('settingTheme').value;
+
+            if (selectedTheme === 'custom_image' && !appSettings.customBgImage) {
+                document.getElementById('bgFileInput').click();
+            }
+            appSettings.theme = selectedTheme;
+            appSettings.headerMode = document.getElementById('settingHeaderMode').value;
+            appSettings.showTyping = document.getElementById('settingShowTyping').checked;
+            appSettings.soundEffects = document.getElementById('settingSoundEffects').checked;
+            const prevContactName = appSettings.contactName;
+            appSettings.contactName = document.getElementById('settingContactName').value;
+
+            // Keep reply names synchronized with the header contact name
+            const newReplyNameInput = document.getElementById('newReplyName');
+            if (newReplyNameInput) {
+                newReplyNameInput.value = appSettings.contactName;
+            }
+            let updatedAnyReply = false;
+            messages.forEach(m => {
+                if (m.replyName || m.replyText) {
+                    if (!m.replyName || m.replyName === prevContactName) {
+                        m.replyName = appSettings.contactName;
+                        updatedAnyReply = true;
+                    }
+                }
+            });
+            if (updatedAnyReply) {
+                renderMessagesListUI();
+            }
+
+            const placeholder = document.getElementById('contactAvatarPlaceholder');
+            if (placeholder) {
+                const firstChar = (appSettings.contactName || 'P').trim().charAt(0).toUpperCase() || 'P';
+                placeholder.textContent = firstChar;
+            }
+
+            renderChatFrame(null);
+        }
+
+        function handleAvatarUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    appSettings.contactAvatarImg = img;
+                    const previewEl = document.getElementById('contactAvatarPreview');
+                    const placeholderEl = document.getElementById('contactAvatarPlaceholder');
+                    const removeBtn = document.getElementById('btnRemoveAvatar');
+                    if (previewEl) {
+                        previewEl.src = e.target.result;
+                        previewEl.classList.remove('hidden');
+                    }
+                    if (placeholderEl) placeholderEl.classList.add('hidden');
+                    if (removeBtn) removeBtn.classList.remove('hidden');
+                    renderChatFrame(null);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function clearContactAvatar() {
+            appSettings.contactAvatarImg = null;
+            const previewEl = document.getElementById('contactAvatarPreview');
+            const placeholderEl = document.getElementById('contactAvatarPlaceholder');
+            const removeBtn = document.getElementById('btnRemoveAvatar');
+            if (previewEl) previewEl.classList.add('hidden');
+            if (placeholderEl) placeholderEl.classList.remove('hidden');
+            if (removeBtn) removeBtn.classList.add('hidden');
+            renderChatFrame(null);
+        }
+
+        function handleCustomBgUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    appSettings.customBgImage = img;
+                    appSettings.theme = 'custom_image';
+                    renderChatFrame(null);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('newMsgText').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addMessageFromComposer();
+            }
+        });
+
+        window.onload = function () {
+            generateTelegramPatternCanvas();
+            renderMessagesListUI();
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(() => {
+                    showStaticFullChat();
+                });
+            } else {
+                showStaticFullChat();
+            }
+        };
+    </script>
+</body>
+</html>
