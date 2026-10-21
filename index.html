@@ -630,6 +630,8 @@
         let appSettings = {
             msgIntervalMs: 1500,
             platform: 'telegram', baleDate: '۲۸ مهر', baleShowJoinBanner: true,
+            eitaaStatus: 'آخرین بازدید خیلی وقت پیش', eitaaShowEmptyState: true,
+            whatsappStatus: 'آخرین بازدید اخیراً', whatsappDate: 'دیروز', whatsappShowEncryption: true,
             fontFamily: "'Vazirmatn', Tahoma, sans-serif",
             fontSize: 22,
             timeGap: 26,
@@ -1239,12 +1241,18 @@
             }
 
             // Bubble background color
-            const isBale = appSettings.platform === 'bale';
-            const isDark = !isBale && appSettings.theme === 'dark_telegram';
+            const platform = appSettings.platform;
+            const isBale = platform === 'bale';
+            const isWhatsapp = platform === 'whatsapp';
+            const isEitaa = platform === 'eitaa';
+            const isDark = isWhatsapp || isEitaa || (!isBale && appSettings.theme === 'dark_telegram');
             if (isRight) {
-                c.fillStyle = isBale ? '#d9eaf8' : (isDark ? '#2b5278' : '#effdde');
+                c.fillStyle = isWhatsapp ? '#075344' :
+                    isEitaa ? '#432047' :
+                    isBale ? '#d9eaf8' : (isDark ? '#2b5278' : '#effdde');
             } else {
-                c.fillStyle = isDark ? '#182533' : '#ffffff';
+                c.fillStyle = isWhatsapp ? '#24282b' :
+                    isEitaa ? '#29212e' : (isDark ? '#182533' : '#ffffff');
             }
 
             c.shadowColor = 'rgba(0, 0, 0, 0.08)';
@@ -1335,15 +1343,15 @@
                 const replyW = bubbleW - 20;
                 const replyH = 44;
 
-                c.fillStyle = isRight ? 'rgba(74, 222, 128, 0.15)' : 'rgba(56, 189, 248, 0.12)';
+                c.fillStyle = isWhatsapp ? 'rgba(54, 211, 153, .16)' : isEitaa ? 'rgba(206, 154, 233, .16)' : (isRight ? 'rgba(74, 222, 128, 0.15)' : 'rgba(56, 189, 248, 0.12)');
                 c.beginPath();
                 c.roundRect(replyX, replyY, replyW, replyH, 8);
                 c.fill();
 
-                c.fillStyle = isRight ? '#15803d' : '#0284c7';
+                c.fillStyle = isWhatsapp ? '#50d6a8' : isEitaa ? '#ddb8ea' : (isRight ? '#15803d' : '#0284c7');
                 c.fillRect(replyX, replyY, 3.5, replyH);
 
-                c.fillStyle = isRight ? '#15803d' : '#0284c7';
+                c.fillStyle = isWhatsapp ? '#50d6a8' : isEitaa ? '#ddb8ea' : (isRight ? '#15803d' : '#0284c7');
                 c.font = `700 13.5px ${persianFont}`;
                 c.textAlign = 'right';
                 c.direction = 'rtl';
@@ -1363,7 +1371,7 @@
                 const lineHeight = layout.lineHeight || Math.round(fontSize * 1.48);
 
                 if (layout.isJumbomoji && !layout.hasMedia) {
-                    drawRichLineWithTelegramEmojis(c, msg.text, bubbleX + bubbleW - 14, bubbleX + 14, textStartY + 44, 38, persianFont, '#000000', false);
+                    drawRichLineWithTelegramEmojis(c, msg.text, bubbleX + bubbleW - 14, bubbleX + 14, textStartY + 44, 38, persianFont, isDark ? '#f8fafc' : '#000000', false);
                 } else {
                     let currentY = textStartY + Math.round(fontSize * 0.92);
                     const rightEdge = bubbleX + bubbleW - 15;
@@ -1391,7 +1399,7 @@
                 c.fillText(timeStr, timeX, timeY);
 
                 if (isRight) {
-                    drawCheckmarks(c, timeX - timeW - 20, timeY - 4, appSettings.platform === 'bale' ? '#438cbd' : '#4fae4e');
+                    drawCheckmarks(c, timeX - timeW - 20, timeY - 4, isWhatsapp ? '#80c8eb' : isEitaa ? '#d8b3e8' : isBale ? '#438cbd' : '#4fae4e');
                 }
             }
 
@@ -1405,10 +1413,12 @@
             const bubbleH = 42;
             const marginSide = 18;
             const bubbleX = isRight ? (canvasWidth - bubbleW - marginSide) : marginSide;
-            const isDark = appSettings.theme === 'dark_telegram';
-
+            const isDark = ['whatsapp','eitaa'].includes(appSettings.platform) ||
+                appSettings.theme === 'dark_telegram';
             c.save();
-            c.fillStyle = isDark ? '#182533' : '#ffffff';
+            c.fillStyle = appSettings.platform === 'whatsapp' ? '#24282b' :
+                appSettings.platform === 'eitaa' ? '#29212e' :
+                (isDark ? '#182533' : '#ffffff');
             c.shadowColor = 'rgba(0, 0, 0, 0.08)';
             c.shadowBlur = 4;
             c.shadowOffsetY = 1;
@@ -2973,8 +2983,13 @@
             name: projectName,
             savedAt: new Date().toISOString(),
             settings: {
-                platform: s.platform === 'bale' ? 'bale' : 'telegram',
+                platform: ['telegram','bale','eitaa','whatsapp'].includes(s.platform) ? s.platform : 'telegram',
                 baleDate: String(s.baleDate ?? '۲۸ مهر'), baleShowJoinBanner: s.baleShowJoinBanner !== false,
+                eitaaStatus: String(s.eitaaStatus ?? 'آخرین بازدید خیلی وقت پیش'),
+                eitaaShowEmptyState: s.eitaaShowEmptyState !== false,
+                whatsappStatus: String(s.whatsappStatus ?? 'آخرین بازدید اخیراً'),
+                whatsappDate: String(s.whatsappDate ?? 'دیروز'),
+                whatsappShowEncryption: s.whatsappShowEncryption !== false,
                 msgIntervalMs: s.msgIntervalMs, fontFamily: s.fontFamily,
                 fontSize: s.fontSize, timeGap: s.timeGap, theme: s.theme,
                 headerMode: s.headerMode, showTyping: s.showTyping,
@@ -3063,8 +3078,13 @@
         const s = data.settings;
         const allowedThemes = ['classic_green', 'dark_telegram', 'sky_blue', 'custom_image'];
         const settings = {
-            platform: s.platform === 'bale' ? 'bale' : 'telegram',
+            platform: ['telegram','bale','eitaa','whatsapp'].includes(s.platform) ? s.platform : 'telegram',
             baleDate: String(s.baleDate ?? '۲۸ مهر').slice(0, 30), baleShowJoinBanner: s.baleShowJoinBanner !== false,
+            eitaaStatus: String(s.eitaaStatus ?? 'آخرین بازدید خیلی وقت پیش').slice(0, 80),
+            eitaaShowEmptyState: s.eitaaShowEmptyState !== false,
+            whatsappStatus: String(s.whatsappStatus ?? 'آخرین بازدید اخیراً').slice(0, 80),
+            whatsappDate: String(s.whatsappDate ?? 'دیروز').slice(0, 30),
+            whatsappShowEncryption: s.whatsappShowEncryption !== false,
             msgIntervalMs: Math.max(300, Math.min(20000, Number(s.msgIntervalMs) || 1500)),
             fontFamily: ["'Vazirmatn', Tahoma, sans-serif", "Tahoma, 'Segoe UI', Arial, sans-serif", "'Segoe UI', Tahoma, sans-serif"].includes(s.fontFamily) ? s.fontFamily : "'Vazirmatn', Tahoma, sans-serif",
             fontSize: Math.max(12, Math.min(50, Number(s.fontSize) || 22)),
@@ -3106,6 +3126,17 @@
             if (dateInput) dateInput.value = settings.baleDate;
             const joinInput = document.getElementById('baleJoinNotice');
             if (joinInput) joinInput.checked = settings.baleShowJoinBanner;
+            for (const [id, value] of [
+                ['eitaaStatusInput', settings.eitaaStatus], ['eitaaEmptyInput', settings.eitaaShowEmptyState],
+                ['whatsappStatusInput', settings.whatsappStatus], ['whatsappDateInput', settings.whatsappDate],
+                ['whatsappEncryptionInput', settings.whatsappShowEncryption]
+            ]) {
+                const input = document.getElementById(id);
+                if (input) {
+                    if (input.type === 'checkbox') input.checked = value;
+                    else input.value = value;
+                }
+            }
             if (window.updatePlatformTabs) window.updatePlatformTabs();
             renderMessagesListUI();
             showStaticFullChat();
