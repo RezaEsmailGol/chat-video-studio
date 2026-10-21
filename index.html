@@ -3383,5 +3383,328 @@
       renderTabs();
     })();
     </script>
+    <!-- Eitaa and WhatsApp skins: both run in the same self-contained HTML. -->
+    <script>
+    (function () {
+      'use strict';
+      const previousBackground=drawTelegramBackground;
+      const previousHeader=drawTelegramTopHeader;
+      const previousFooter=drawTelegramBottomChatBar;
+      const patternCache={};
+
+      function makeDoodlePattern(platform) {
+        const p=document.createElement('canvas');
+        p.width=p.height=480;
+        const g=p.getContext('2d');
+        g.strokeStyle=platform==='whatsapp'?'rgba(158,166,160,0.17)':'rgba(107,76,151,0.26)';
+        g.lineWidth=1.5;
+        g.lineCap='round';
+        g.lineJoin='round';
+        function shape(type,x,y,size,angle) {
+          g.save();g.translate(x,y);g.rotate(angle);g.scale(size,size);
+          g.beginPath();
+          if(type===0) { // starburst
+            for(let i=0;i<16;i++){const a=i*Math.PI/8,r=i%2?9:20;
+              if(i===0)g.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+              else g.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+            }g.closePath();
+          } else if(type===1) { // flower and curved leaf
+            for(let i=0;i<8;i++){const a=i*Math.PI/4;
+              g.moveTo(0,0);g.ellipse(Math.cos(a)*12,Math.sin(a)*12,7,13,a,0,Math.PI*2);
+            }
+            g.arc(0,0,6,0,Math.PI*2);
+          } else if(type===2) { // planet
+            g.arc(0,0,19,0,Math.PI*2);g.moveTo(-28,-4);
+            g.bezierCurveTo(-22,-17,33,-19,29,-7);
+            g.bezierCurveTo(34,9,-30,20,-28,-4);
+          } else if(type===3) { // outlined envelope
+            g.roundRect(-24,-16,48,32,5);
+            g.moveTo(-23,-15);g.lineTo(0,5);g.lineTo(23,-15);
+          } else if(type===4) { // chat bubble
+            g.roundRect(-22,-15,44,31,9);g.moveTo(-8,15);g.lineTo(-14,24);
+            g.lineTo(1,16);g.moveTo(-10,-3);g.lineTo(10,-3);
+            g.moveTo(-10,5);g.lineTo(6,5);
+          } else if(type===5) { // heart
+            g.moveTo(0,17);g.bezierCurveTo(-10,9,-26,-1,-18,-15);
+            g.bezierCurveTo(-10,-29,0,-17,0,-10);
+            g.bezierCurveTo(0,-17,10,-29,18,-15);
+            g.bezierCurveTo(26,-1,10,9,0,17);
+          } else if(type===6) { // musical note
+            g.moveTo(8,-23);g.lineTo(8,12);
+            g.ellipse(1,14,9,6,-.2,0,Math.PI*2);
+            g.moveTo(8,-23);g.lineTo(23,-17);g.lineTo(23,10);
+            g.ellipse(16,12,9,6,-.2,0,Math.PI*2);
+          } else if(type===7) { // candle / lantern
+            g.roundRect(-11,-8,22,31,4);g.moveTo(-15,-8);g.lineTo(15,-8);
+            g.moveTo(0,-10);g.quadraticCurveTo(-13,-24,1,-28);
+            g.quadraticCurveTo(13,-20,0,-10);
+          } else if(type===8) { // soccer / round object
+            g.arc(0,0,21,0,Math.PI*2);g.moveTo(0,-12);g.lineTo(13,-3);
+            g.lineTo(9,12);g.lineTo(-9,12);g.lineTo(-13,-3);g.closePath();
+          } else if(type===9) { // city building
+            g.rect(-20,-15,40,36);
+            for(let i=-11;i<15;i+=12)for(let j=-7;j<17;j+=12)g.rect(i,j,5,7);
+            g.moveTo(-25,23);g.lineTo(25,23);
+          } else if(type===10) { // phone
+            g.roundRect(-13,-24,26,48,5);
+            g.moveTo(-7,-17);g.lineTo(7,-17);g.moveTo(-3,17);g.lineTo(3,17);
+          } else { // leaf
+            g.moveTo(-24,20);g.quadraticCurveTo(-20,-17,24,-24);
+            g.quadraticCurveTo(22,12,-24,20);
+            g.moveTo(-24,20);g.lineTo(20,-18);
+            g.moveTo(-7,5);g.lineTo(-10,-10);
+            g.moveTo(6,-6);g.lineTo(15,3);
+          }
+          g.stroke();g.restore();
+        }
+        // Repeated, irregular placement inspired by the two supplied dark chat wallpapers.
+        for(let i=0;i<52;i++) {
+          const x=(i*157+31+(Math.floor(i/8)*33))%480;
+          const y=(i*197+19+(Math.floor(i/5)*21))%480;
+          const angle=((i%7)-3)*0.22;
+          shape((i*7+Math.floor(i/5))%12,x,y,.52+(i%5)*.13,angle);
+        }
+        g.globalAlpha=.6;
+        for(let i=0;i<65;i++) {
+          const x=(i*71+17)%480,y=(i*139+37)%480;
+          g.beginPath();
+          if(i%3===0){g.moveTo(x-4,y);g.lineTo(x+4,y);g.moveTo(x,y-4);g.lineTo(x,y+4);}
+          else g.arc(x,y,1.4+(i%3),0,Math.PI*2);
+          g.stroke();
+        }
+        return p;
+      }
+      function pill(c,text,x,y,fontSize,ink,fill,maxWidth) {
+        c.save();c.font='600 '+fontSize+'px "Vazirmatn", Tahoma, sans-serif';
+        c.textAlign='center';c.textBaseline='middle';
+        const width=Math.min(maxWidth,Math.max(95,c.measureText(text).width+34));
+        c.fillStyle=fill;c.beginPath();c.roundRect(x-width/2,y,width,32,16);c.fill();
+        c.fillStyle=ink;c.fillText(text,x,y+16,width-15);
+        c.restore();
+      }
+      function drawWhatsappNotices(c,w) {
+        const date=String(appSettings.whatsappDate||'').trim();
+        if(date)pill(c,date,w/2,142,17,'#b3c7c3','#22292b',w-60);
+        if(appSettings.whatsappShowEncryption) {
+          c.save();c.font='400 15px "Vazirmatn", Tahoma, sans-serif';
+          c.textAlign='center';c.textBaseline='middle';
+          const line1='🔒 Messages and calls are end-to-end encrypted.';
+          const line2='Only people in this chat can read or share them.';
+          const lineWidth=Math.min(w-50,Math.max(c.measureText(line1).width,c.measureText(line2).width)+38);
+          c.fillStyle='#22282b';c.beginPath();c.roundRect((w-lineWidth)/2,188,lineWidth,72,16);c.fill();
+          c.fillStyle='#c3cfcb';c.fillText(line1,w/2,213,lineWidth-12);
+          c.fillText(line2,w/2,237,lineWidth-12);c.restore();
+        }
+      }
+      function drawEitaaEmptyNotice(c,w,h) {
+        if(messages.length!==0 || appSettings.eitaaShowEmptyState===false)return;
+        const x=w/2,y=h/2-78,ww=Math.min(390,w-78),hh=146;
+        c.save();c.fillStyle='rgba(74,30,79,.84)';
+        c.beginPath();c.roundRect(x-ww/2,y,ww,hh,25);c.fill();
+        c.direction='rtl';c.textAlign='center';c.textBaseline='middle';
+        c.fillStyle='#f8eff9';c.font='700 22px "Vazirmatn",Tahoma,sans-serif';
+        c.fillText('هنوز پیامی در اینجا موجود نیست',x,y+34,ww-24);
+        c.font='400 18px "Vazirmatn",Tahoma,sans-serif';
+        c.fillText('پیامی ارسال کنید یا بر روی استیکر',x,y+83,ww-24);
+        c.fillText('خوش‌آمدگویی زیر بزنید.',x,y+114,ww-24);c.restore();
+      }
+      drawTelegramBackground=function(c,w,h) {
+        const platform=appSettings.platform;
+        if(platform!=='eitaa'&&platform!=='whatsapp')return previousBackground(c,w,h);
+        if(appSettings.theme==='custom_image'&&appSettings.customBgImage) {
+          previousBackground(c,w,h);
+        } else {
+          c.fillStyle=platform==='whatsapp'?'#111515':'#0c0810';
+          c.fillRect(0,0,w,h);
+          if(!patternCache[platform])patternCache[platform]=makeDoodlePattern(platform);
+          c.fillStyle=c.createPattern(patternCache[platform],'repeat');c.fillRect(0,0,w,h);
+        }
+        if(appSettings.headerMode==='with_header') {
+          if(platform==='whatsapp')drawWhatsappNotices(c,w);
+          else drawEitaaEmptyNotice(c,w,h);
+        }
+      };
+      function searchIcon(c,x,y) {
+        c.beginPath();c.arc(x-3,y-3,11,0,Math.PI*2);
+        c.moveTo(x+5,y+6);c.lineTo(x+16,y+17);c.stroke();
+      }
+      function dotsIcon(c,x,y) {
+        c.beginPath();
+        [y-12,y,y+12].forEach(yy=>{c.moveTo(x+3,yy);c.arc(x,yy,3,0,Math.PI*2);});
+        c.fill();
+      }
+      function videoIcon(c,x,y) {
+        c.beginPath();c.roundRect(x-17,y-12,29,25,5);
+        c.moveTo(x+12,y-5);c.lineTo(x+25,y-12);
+        c.lineTo(x+25,y+12);c.lineTo(x+12,y+5);c.stroke();
+      }
+      function phoneIcon(c,x,y) {
+        c.beginPath();c.moveTo(x-9,y-13);c.quadraticCurveTo(x-19,y-3,x-2,y+15);
+        c.quadraticCurveTo(x+7,y+22,x+14,y+7);
+        c.moveTo(x+14,y+7);c.lineTo(x+7,y+2);
+        c.moveTo(x-9,y-13);c.lineTo(x-2,y-7);c.stroke();
+      }
+      function avatar(c,x,y,r,isWhatsapp) {
+        c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();
+        const im=appSettings.contactAvatarImg;
+        if(im){const k=Math.max(2*r/im.width,2*r/im.height);
+          c.drawImage(im,x-im.width*k/2,y-im.height*k/2,im.width*k,im.height*k);
+        } else {
+          c.fillStyle=isWhatsapp?'#607a65':'#7460ca';c.fillRect(x-r,y-r,2*r,2*r);
+          const name=String(appSettings.contactName||'AU').trim();
+          const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w.charAt(0).toUpperCase()).join('');
+          c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';
+          c.font='700 23px "Vazirmatn",Tahoma,sans-serif';
+          c.fillText(initials||'AU',x,y+1);
+        }
+        c.restore();
+      }
+      drawTelegramTopHeader=function(c,w,typing,time) {
+        const p=appSettings.platform;
+        if(p!=='eitaa'&&p!=='whatsapp')return previousHeader(c,w,typing,time);
+        const wa=p==='whatsapp',headerH=92,ink='#f5f6f6';
+        c.save();c.fillStyle=wa?'#181b1d':'#232224';c.fillRect(0,0,w,headerH);
+        c.fillStyle=ink;c.strokeStyle=ink;c.lineWidth=2.4;c.lineCap='round';c.lineJoin='round';
+        if(wa) {
+          avatar(c,43,46,29,true);
+          c.textAlign='left';c.direction='auto';c.textBaseline='middle';
+          c.font='700 23px "Vazirmatn",Tahoma,sans-serif';
+          const name=String(appSettings.contactName||'مخاطب').trim();
+          c.fillText(name,87,37,Math.max(160,w*.28));
+          c.font='400 14.5px "Vazirmatn",Tahoma,sans-serif';c.fillStyle='#a9b4b1';
+          const status=typing?'در حال نوشتن...':String(appSettings.whatsappStatus||'');
+          c.fillText(status,87,64,Math.max(150,w*.28));
+          // Text pill and desktop-inspired top-right actions.
+          c.fillStyle='#222729';c.strokeStyle='#343a3d';
+          c.beginPath();c.roundRect(w-426,22,151,47,24);c.fill();c.stroke();
+          c.fillStyle='#e1e4e3';c.font='600 17px Arial,sans-serif';
+          c.fillText('Add to list',w-412,48,126);
+          c.fillStyle=ink;c.strokeStyle=ink;c.lineWidth=2.2;
+          videoIcon(c,w-230,46);phoneIcon(c,w-163,46);searchIcon(c,w-91,46);dotsIcon(c,w-30,46);
+        } else {
+          dotsIcon(c,27,46);searchIcon(c,95,45);
+          avatar(c,w-44,46,32,false);
+          const status=typing?'در حال نوشتن...':String(appSettings.eitaaStatus||'');
+          c.textAlign='right';c.direction='rtl';c.textBaseline='middle';c.fillStyle='#fff';
+          c.font='700 24px "Vazirmatn",Tahoma,sans-serif';
+          c.fillText(String(appSettings.contactName||'مخاطب'),w-94,36,w-275);
+          c.fillStyle='#a4a0a9';c.font='400 17px "Vazirmatn",Tahoma,sans-serif';
+          c.fillText(status,w-94,69,w-275);
+        }
+        c.restore();
+      };
+      function clipIcon(c,x,y) {
+        c.beginPath();c.moveTo(x+8,y-12);c.lineTo(x+10,y+8);
+        c.arc(x+1,y+8,9,0,Math.PI,true);c.lineTo(x-9,y-14);
+        c.arc(x-2,y-14,7,Math.PI,0,true);c.lineTo(x+4,y+6);
+        c.arc(x+1,y+6,3,0,Math.PI);c.stroke();
+      }
+      function micIcon(c,x,y) {
+        c.beginPath();c.roundRect(x-6,y-15,12,21,6);
+        c.moveTo(x-12,y-1);c.arc(x,y-1,12,Math.PI,0,true);
+        c.moveTo(x,y+11);c.lineTo(x,y+18);c.stroke();
+      }
+      function smileIcon(c,x,y) {
+        c.beginPath();c.arc(x,y,15,0,Math.PI*2);
+        c.moveTo(x-6,y-5);c.arc(x-6,y-5,1.7,0,Math.PI*2);
+        c.moveTo(x+6,y-5);c.arc(x+6,y-5,1.7,0,Math.PI*2);
+        c.moveTo(x-8,y+2);c.quadraticCurveTo(x,y+14,x+8,y+2);c.stroke();
+      }
+      drawTelegramBottomChatBar=function(c,w,h) {
+        const p=appSettings.platform;
+        if(p!=='eitaa'&&p!=='whatsapp')return previousFooter(c,w,h);
+        const wa=p==='whatsapp',top=h-74,cy=top+37;
+        c.save();c.fillStyle=wa?'#161819':'#131014';c.fillRect(0,top,w,74);
+        c.lineWidth=2.5;c.lineCap='round';c.lineJoin='round';
+        if(wa) {
+          c.fillStyle='#262a2b';c.beginPath();c.roundRect(12,top+7,w-24,61,28);c.fill();
+          c.strokeStyle='#e8efeb';clipIcon(c,48,cy);smileIcon(c,102,cy);
+          c.fillStyle='#aeb8b5';c.font='400 20px Arial,sans-serif';
+          c.textAlign='left';c.textBaseline='middle';c.fillText('Type a message',151,cy);
+          micIcon(c,w-44,cy);
+        } else {
+          c.fillStyle='#f68e00';c.beginPath();c.arc(49,cy,30,0,Math.PI*2);c.fill();
+          c.strokeStyle='#fff';micIcon(c,49,cy);
+          c.fillStyle='#252428';c.beginPath();c.roundRect(94,top+5,w-106,64,21);c.fill();
+          c.strokeStyle='#b1b0bd';clipIcon(c,124,cy);smileIcon(c,w-45,cy);
+          c.fillStyle='#a9a7b3';c.direction='rtl';c.textAlign='right';c.textBaseline='middle';
+          c.font='400 20px "Vazirmatn",Tahoma,sans-serif';
+          c.fillText('پیام',w-95,cy);
+        }
+        c.restore();
+      };
+
+      // Activate the two previously disabled tabs created by the Bale skin.
+      const panel=document.querySelector('section[aria-label="قالب پیام‌رسان"]');
+      if(!panel)throw new Error('Messenger platform selector is unavailable');
+      const group=panel.querySelector('[role="group"]');
+      const oldPending=Array.from(group.querySelectorAll('button[disabled]'));
+      if(oldPending.length!==2)throw new Error('Unexpected number of messenger placeholders');
+      [['eitaa','ایتا'],['whatsapp','واتساپ']].forEach((spec,i)=>{
+        const button=document.createElement('button');
+        button.id='platform'+(spec[0]==='eitaa'?'Eitaa':'WhatsApp');
+        button.type='button';
+        button.textContent=spec[1];
+        button.setAttribute('aria-pressed','false');
+        button.className='px-3 py-2 rounded-xl border text-sm font-semibold transition bg-slate-950 border-slate-700 text-slate-300';
+        button.addEventListener('click',()=>window.selectChatPlatform(spec[0]));
+        oldPending[i].replaceWith(button);
+      });
+      const options=document.createElement('div');
+      options.innerHTML=
+        '<div id="eitaaExtraSettings" class="hidden flex flex-wrap items-center gap-3 border-t border-slate-700 pt-3 mt-3">'+
+          '<label class="text-xs text-slate-300" for="eitaaStatusInput">وضعیت مخاطب ایتا</label>'+
+          '<input id="eitaaStatusInput" maxlength="80" value="آخرین بازدید خیلی وقت پیش" class="flex-1 min-w-32 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs px-3 py-2" />'+
+          '<label class="text-xs text-slate-300 flex items-center gap-2"><input id="eitaaEmptyInput" type="checkbox" checked /> پیام راهنمای چت خالی</label>'+
+        '</div>'+
+        '<div id="whatsappExtraSettings" class="hidden flex flex-wrap items-center gap-3 border-t border-slate-700 pt-3 mt-3">'+
+          '<label class="text-xs text-slate-300" for="whatsappStatusInput">وضعیت واتساپ</label>'+
+          '<input id="whatsappStatusInput" maxlength="80" value="آخرین بازدید اخیراً" class="flex-1 min-w-32 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs px-3 py-2" />'+
+          '<label class="text-xs text-slate-300" for="whatsappDateInput">تاریخ</label>'+
+          '<input id="whatsappDateInput" maxlength="30" value="دیروز" class="w-32 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs px-3 py-2" />'+
+          '<label class="text-xs text-slate-300 flex items-center gap-2"><input id="whatsappEncryptionInput" type="checkbox" checked /> اعلان رمزنگاری نمایشی</label>'+
+        '</div>';
+      panel.append(...options.children);
+      function renderAllTabs() {
+        const selected=['telegram','bale','eitaa','whatsapp'].includes(appSettings.platform)?appSettings.platform:'telegram';
+        const names={telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp'};
+        Object.entries(names).forEach(([key,suffix])=>{
+          const button=document.getElementById('platform'+suffix);
+          if(!button)return;
+          const active=selected===key;
+          button.setAttribute('aria-pressed',String(active));
+          button.className='px-3 py-2 rounded-xl border text-sm font-semibold transition '+
+             (active?(key==='whatsapp'?'bg-emerald-700 border-emerald-500 text-white':
+                       key==='eitaa'?'bg-purple-700 border-purple-500 text-white':
+                       'bg-sky-600 border-sky-500 text-white'):
+                       'bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800');
+        });
+        [['bale','baleExtraSettings'],['eitaa','eitaaExtraSettings'],['whatsapp','whatsappExtraSettings']].forEach(([key,id])=>{
+          document.getElementById(id)?.classList.toggle('hidden',selected!==key);
+        });
+      }
+      window.updatePlatformTabs=renderAllTabs;
+      window.selectChatPlatform=function(platform) {
+        if(!['telegram','bale','eitaa','whatsapp'].includes(platform)||animState.isExporting)return;
+        appSettings.platform=platform;
+        renderAllTabs();
+        showStaticFullChat();
+      };
+      function updateMessengerOptions() {
+        appSettings.eitaaStatus=document.getElementById('eitaaStatusInput').value.slice(0,80);
+        appSettings.eitaaShowEmptyState=document.getElementById('eitaaEmptyInput').checked;
+        appSettings.whatsappStatus=document.getElementById('whatsappStatusInput').value.slice(0,80);
+        appSettings.whatsappDate=document.getElementById('whatsappDateInput').value.slice(0,30);
+        appSettings.whatsappShowEncryption=document.getElementById('whatsappEncryptionInput').checked;
+        showStaticFullChat();
+      }
+      ['eitaaStatusInput','eitaaEmptyInput','whatsappStatusInput','whatsappDateInput','whatsappEncryptionInput']
+        .forEach(id=>{
+          const node=document.getElementById(id);
+          node.addEventListener(node.type==='checkbox'?'change':'input',updateMessengerOptions);
+        });
+      renderAllTabs();
+    })();
+    </script>
 </body>
 </html>
