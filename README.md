@@ -1,59 +1,34 @@
 # Chat Video Studio 🎬
 
-A Persian-first, browser-based **fictional chat video creator** inspired by Telegram's visual layout. Build a scripted two-person conversation, preview the animation and export a video.
+یک ابزار ساده و تک‌فایلی برای طراحی **گفت‌وگوهای نمایشی** و ساخت ویدیوی چت شبیه تلگرام.
 
-> **Development preview:** Work in progress. Do not treat generated conversations as authentic screenshots or evidence. This project is not affiliated with Telegram.
+**همه کد برنامه در تنها فایل `index.html` قرار دارد.** نصب، Node.js، دیتابیس سرور و فرایند Build لازم نیست.
 
-## Current features
+## استفاده
 
-- Two-sided text messages, emojis, replies, timestamps, photos, and video **thumbnails**.
-- Chat preview, configurable timing, theme, profile avatar and wallpaper.
-- PNG image export.
-- Video export using WebCodecs H.264/MP4 where supported, falling back to MediaRecorder and the **actual** recorded format (MP4 or WebM).
-- Save/recover one working project locally using IndexedDB.
-- Export/import self-contained JSON project backups.
+1. فایل `index.html` را باز کن؛ یا کل مخزن را Clone کن و فایل را با مرورگر اجرا کن.
+2. متن پیام‌ها، عکس، ایموجی، زمان و تنظیمات نمایش را تغییر بده.
+3. پیش‌نمایش بگیر و خروجی عکس یا ویدیو بساز.
+4. پروژه در مرورگر به‌صورت خودکار در IndexedDB ذخیره می‌شود. برای پشتیبان‌گیری، از گزینه **دانلود پروژه JSON** استفاده کن و بعداً آن را وارد کن.
 
-## Run locally
+اگر بازکردن مستقیم HTML در مرورگرت محدودیت داشت، از پوشه پروژه این دستور اختیاری را اجرا کن:
 
-No build step yet:
-
-1. Clone the repository.
-2. Run a static HTTP server in the repository folder:
-
-   ```bash
-   python -m http.server 8000
-   ```
-
-3. Open `http://localhost:8000` in a recent Chromium-based browser.
-
-**Important:** Internet access is currently required for fonts, emojis and CDN scripts. Browser features, MP4/AAC encoders and performance vary by browser. Test a real export in your target browser before relying on it.
-
-## Current limits
-
-- Uploaded video attachments are represented as thumbnails, **not** embedded moving video or sound in the rendered conversation.
-- MP4 encoding is not supported in every browser; WebM may be the honest fallback.
-- Autosave keeps **one project per browser/profile**. JSON backups are recommended.
-- Large images may use substantial IndexedDB space and JSON files may be large.
-- No cloud sync, user accounts, multi-format templates or production-grade automated browser testing yet.
-- Dependency licenses and redistribution terms must be reviewed before a public release.
-
-## Local development
-
-```bash
-node scripts/check-source.mjs
+```sh
+python -m http.server 8000
 ```
 
-## Roadmap
+و آدرس `http://localhost:8000` را باز کن.
 
-1. Stabilize export, progress, error handling, rendering consistency and browser tests.
-2. Improve save/load, undo/redo, project library and media handling.
-3. Add modular templates, resolutions, timeline editor, sound and documentation.
-4. Optionally add cloud rendering and user accounts after a reliable local release.
+## نکات مهم
 
-## Safety
+- برای فونت، ایموجی و کتابخانه‌های CDN فعلاً اینترنت لازم است.
+- خروجی ویدیو بسته به پشتیبانی مرورگر **MP4 یا WebM** است؛ پسوند واقعی فایل مشخص می‌شود.
+- فایل ویدیویی ضمیمه در چت فعلاً به‌شکل **تصویر بندانگشتی** دیده می‌شود و به‌صورت ویدیوی متحرک داخل خروجی قرار نمی‌گیرد.
+- ذخیره خودکار مختص همین مرورگر است و یک پروژه فعال را نگه می‌دارد؛ برای بکاپ از JSON استفاده کن.
+- این نسخه هنوز به تست واقعی و کامل مرورگر و خروجی‌ها نیاز دارد.
 
-For fictional, educational, and authorized creative content only. Do not use this tool to forge evidence, impersonate real people or misrepresent a conversation as genuine.
+## توسعه
 
-## Status
+تغییرات جدید به‌صورت مرحله‌ای در [Pull Requestها](https://github.com/RezaEsmailGol/chat-video-studio/pulls) بررسی می‌شوند. هنوز نسخه نهایی منتشر نشده است.
 
-Development work is tracked in pull requests. No production release or open-source license has been selected yet.
+**استفاده مسئولانه:** فقط برای مکالمات ساختگی یا دارای مجوز استفاده شود؛ گفت‌وگوهای تولیدی نباید به‌عنوان مدرک واقعی یا مکالمه اصیل دیگران معرفی شوند. این پروژه وابسته به تلگرام نیست.
