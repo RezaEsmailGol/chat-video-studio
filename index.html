@@ -91,7 +91,7 @@
 
                 <button id="btnExportMp4" onclick="exportChatVideoMP4()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-emerald-600/25 flex items-center gap-2">
                     <i class="fa-solid fa-film"></i>
-                    <span>ساخت و دانلود ویدیو MP4</span>
+                    <span>ساخت و دانلود ویدیو (MP4/WebM)</span>
                 </button>
             </div>
         </div>
@@ -1916,6 +1916,11 @@
                     await renderWithMediaRecorder(progressFill, percentText);
                 } catch (fallbackErr) {
                     console.error('Export error:', fallbackErr);
+                    document.getElementById('exportProgressStatus').textContent =
+                        'خطا در ساخت ویدیو: ' + (fallbackErr.message || 'مرورگر خروجی ویدیو را پشتیبانی نمی‌کند');
+                    document.getElementById('exportProgressFill').style.width = '0%';
+                    document.getElementById('exportPercentText').textContent = 'ناموفق';
+                    document.getElementById('exportModalTitle').textContent = 'خروجی ویدیو ناموفق بود';
                 }
             } finally {
                 animState.isExporting = false;
@@ -2084,10 +2089,15 @@
                 if (e.data && e.data.size > 0) chunks.push(e.data);
             };
 
-            const recordingFinished = new Promise((resolve) => {
+            const recordingFinished = new Promise((resolve, reject) => {
+                recorder.onerror = (event) => reject(event.error || new Error('MediaRecorder failed'));
                 recorder.onstop = () => {
-                    const blob = new Blob(chunks, { type: chosenMime || 'video/mp4' });
-                    resolve(blob);
+                    if (chunks.length === 0) {
+                        reject(new Error('No video data was recorded'));
+                        return;
+                    }
+                    const actualMime = recorder.mimeType || chunks[0].type || chosenMime || 'video/webm';
+                    resolve(new Blob(chunks, { type: actualMime }));
                 };
             });
 
@@ -2123,7 +2133,10 @@
 
             recorder.stop();
             const videoBlob = await recordingFinished;
-            presentExportedVideo(videoBlob, 'mp4');
+            const actualType = videoBlob.type.toLowerCase();
+            const extension = actualType.includes('mp4') ? 'mp4' : actualType.includes('webm') ? 'webm' : null;
+            if (!extension) throw new Error('Unknown video container: ' + actualType);
+            presentExportedVideo(videoBlob, extension);
         }
 
         function presentExportedVideo(blob, ext = 'mp4') {
@@ -2137,7 +2150,13 @@
             resultView.classList.remove('hidden');
             modalTitle.textContent = 'ویدیو چت تلگرام آماده شد!';
 
+            if (window.lastChatVideoObjectUrl) URL.revokeObjectURL(window.lastChatVideoObjectUrl);
             const url = URL.createObjectURL(blob);
+            window.lastChatVideoObjectUrl = url;
+            const notice = document.getElementById('exportFormatNotice');
+            if (notice) notice.textContent = 'ویدیو با فرمت واقعی ' + ext.toUpperCase() + ' آماده است.';
+            const linkText = document.querySelector('#downloadVideoLink span');
+            if (linkText) linkText.textContent = 'دانلود فایل ویدیو (' + ext.toUpperCase() + ')';
             videoEl.src = url;
             videoEl.muted = false;
             videoEl.volume = 1.0;
@@ -2919,5 +2938,6 @@
             }
         };
     </script>
+    <script src="./studio-projects.js"></script>
 </body>
 </html>
