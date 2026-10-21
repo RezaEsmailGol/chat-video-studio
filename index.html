@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استودیو ساخت ویدیو چت تلگرام (خروجی MP4)</title>
+    <title>استودیو ساخت ویدیو چت | تلگرام و بله</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Vazirmatn & Inter -->
@@ -65,7 +65,7 @@
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                        استودیو ساخت ویدیو چت تلگرام
+                        استودیو ساخت ویدیو چت
                         <span class="text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">خروجی MP4</span>
                     </h1>
                     <p class="text-xs text-slate-400">طراحی مکالمه دوطرفه با ایموجی، عکس، ویدیو و دانلود مستقیم فیلم</p>
@@ -629,6 +629,7 @@
 
         let appSettings = {
             msgIntervalMs: 1500,
+            platform: 'telegram', baleDate: '۲۸ مهر', baleShowJoinBanner: true,
             fontFamily: "'Vazirmatn', Tahoma, sans-serif",
             fontSize: 22,
             timeGap: 26,
@@ -1238,9 +1239,10 @@
             }
 
             // Bubble background color
-            const isDark = appSettings.theme === 'dark_telegram';
+            const isBale = appSettings.platform === 'bale';
+            const isDark = !isBale && appSettings.theme === 'dark_telegram';
             if (isRight) {
-                c.fillStyle = isDark ? '#2b5278' : '#effdde';
+                c.fillStyle = isBale ? '#d9eaf8' : (isDark ? '#2b5278' : '#effdde');
             } else {
                 c.fillStyle = isDark ? '#182533' : '#ffffff';
             }
@@ -1389,7 +1391,7 @@
                 c.fillText(timeStr, timeX, timeY);
 
                 if (isRight) {
-                    drawCheckmarks(c, timeX - timeW - 20, timeY - 4, '#4fae4e');
+                    drawCheckmarks(c, timeX - timeW - 20, timeY - 4, appSettings.platform === 'bale' ? '#438cbd' : '#4fae4e');
                 }
             }
 
@@ -2971,6 +2973,8 @@
             name: projectName,
             savedAt: new Date().toISOString(),
             settings: {
+                platform: s.platform === 'bale' ? 'bale' : 'telegram',
+                baleDate: String(s.baleDate ?? '۲۸ مهر'), baleShowJoinBanner: s.baleShowJoinBanner !== false,
                 msgIntervalMs: s.msgIntervalMs, fontFamily: s.fontFamily,
                 fontSize: s.fontSize, timeGap: s.timeGap, theme: s.theme,
                 headerMode: s.headerMode, showTyping: s.showTyping,
@@ -3059,6 +3063,8 @@
         const s = data.settings;
         const allowedThemes = ['classic_green', 'dark_telegram', 'sky_blue', 'custom_image'];
         const settings = {
+            platform: s.platform === 'bale' ? 'bale' : 'telegram',
+            baleDate: String(s.baleDate ?? '۲۸ مهر').slice(0, 30), baleShowJoinBanner: s.baleShowJoinBanner !== false,
             msgIntervalMs: Math.max(300, Math.min(20000, Number(s.msgIntervalMs) || 1500)),
             fontFamily: ["'Vazirmatn', Tahoma, sans-serif", "Tahoma, 'Segoe UI', Arial, sans-serif", "'Segoe UI', Tahoma, sans-serif"].includes(s.fontFamily) ? s.fontFamily : "'Vazirmatn', Tahoma, sans-serif",
             fontSize: Math.max(12, Math.min(50, Number(s.fontSize) || 22)),
@@ -3096,6 +3102,11 @@
             syncFontSizeControl(settings.fontSize);
             syncTimeSpacingControl(settings.timeGap);
             el('newMsgDelay').value = settings.msgIntervalMs / 1000;
+            const dateInput = document.getElementById('baleDateInput');
+            if (dateInput) dateInput.value = settings.baleDate;
+            const joinInput = document.getElementById('baleJoinNotice');
+            if (joinInput) joinInput.checked = settings.baleShowJoinBanner;
+            if (window.updatePlatformTabs) window.updatePlatformTabs();
             renderMessagesListUI();
             showStaticFullChat();
         } finally {
@@ -3180,6 +3191,166 @@
     else window.addEventListener('load', initialize, { once: true });
 })();
 
+    </script>
+
+    <!-- Additional chat skins. No build step or external JavaScript file. -->
+    <script>
+    (function () {
+      const oldBackground=drawTelegramBackground, oldHeader=drawTelegramTopHeader, oldBottom=drawTelegramBottomChatBar;
+      let tile=null;
+      function makeSpaceTile() {
+        const p=document.createElement('canvas');p.width=p.height=400;const g=p.getContext('2d');
+        g.strokeStyle='rgba(122,130,148,.23)';g.lineWidth=1.8;g.lineCap='round';g.lineJoin='round';
+        function item(type,x,y,z=1,a=0) {
+          g.save();g.translate(x,y);g.scale(z,z);g.rotate(a);g.beginPath();
+          switch(type) {
+            case 0: // Saturn
+              g.arc(0,0,21,0,Math.PI*2);g.moveTo(-33,0);
+              g.bezierCurveTo(-30,-19,26,-25,36,-7);g.bezierCurveTo(42,11,-30,27,-33,0);
+              g.moveTo(-7,-8);g.arc(-7,-8,4,0,Math.PI*2);break;
+            case 1: // Moon
+              g.arc(0,0,24,0,Math.PI*2);g.moveTo(-9,-8);g.arc(-9,-8,8,0,Math.PI*2);
+              g.moveTo(9,8);g.arc(9,8,4,0,Math.PI*2);break;
+            case 2: // Rocket
+              g.moveTo(-10,14);g.lineTo(-10,-13);g.quadraticCurveTo(0,-32,10,-13);
+              g.lineTo(10,14);g.closePath();g.moveTo(-10,1);g.lineTo(-19,10);g.lineTo(-19,23);
+              g.moveTo(10,1);g.lineTo(19,10);g.lineTo(19,23);
+              g.moveTo(-6,19);g.lineTo(0,33);g.lineTo(6,19);
+              g.moveTo(5,-6);g.arc(0,-6,5,0,Math.PI*2);break;
+            case 3: // Astronaut
+              g.arc(0,-13,13,0,Math.PI*2);g.arc(0,-13,8,0,Math.PI*2);
+              g.roundRect(-12,2,24,23,5);g.moveTo(-12,8);g.lineTo(-25,18);
+              g.moveTo(12,8);g.lineTo(25,18);g.moveTo(-7,25);g.lineTo(-12,35);
+              g.moveTo(7,25);g.lineTo(12,35);break;
+            case 4: // Satellite
+              g.rect(-10,-8,20,16);g.rect(-32,-12,15,24);g.rect(17,-12,15,24);
+              g.moveTo(-17,0);g.lineTo(-10,0);g.moveTo(10,0);g.lineTo(17,0);break;
+            case 5: // Star
+              for(let i=0;i<16;i++){let a=Math.PI*i/8,r=i%2?7:18;if(i===0)g.moveTo(r*Math.cos(a),r*Math.sin(a));else g.lineTo(r*Math.cos(a),r*Math.sin(a));}
+              g.closePath();break;
+            default: // Comet
+              g.arc(8,8,11,0,Math.PI*2);g.moveTo(-31,-18);g.quadraticCurveTo(-8,-17,8,-2);
+              g.moveTo(-32,-4);g.lineTo(-2,12);g.moveTo(-20,17);g.lineTo(0,17);
+          }g.stroke();g.restore();
+        }
+        [[0,56,52,.9,0],[2,170,55,.85,.2],[5,290,35,.8,0],[1,355,108,.7,0],
+         [3,80,190,.75,.1],[6,186,183,.9,-.15],[0,307,196,.8,.3],[4,379,266,.7,-.3],
+         [2,60,324,.75,-.2],[1,184,333,.7,0],[3,289,347,.65,.2],[5,365,375,.6,0]].forEach(v=>item(...v));
+        for(let n=0;n<55;n++){const x=(n*73+31)%400,y=(n*139+19)%400;g.beginPath();
+          if(n%4===0){g.moveTo(x-4,y);g.lineTo(x+4,y);g.moveTo(x,y-4);g.lineTo(x,y+4);}
+          else g.arc(x,y,1.5+n%3,0,Math.PI*2);g.stroke();
+        }
+        return p;
+      }
+      drawTelegramBackground = function(c,w,h) {
+        if(appSettings.platform!=='bale')return oldBackground(c,w,h);
+        if(appSettings.theme==='custom_image'&&appSettings.customBgImage)return oldBackground(c,w,h);
+        c.fillStyle='#eff1f5';c.fillRect(0,0,w,h);
+        if(!tile)tile=makeSpaceTile();
+        c.fillStyle=c.createPattern(tile,'repeat');c.fillRect(0,0,w,h);
+        if(appSettings.headerMode!=='with_header')return;
+        // Date and service-message chips, as in the supplied Bale screenshots.
+        const date=String(appSettings.baleDate||'').trim();
+        const join=String(appSettings.contactName||'مخاطب').trim()+' به بله پیوست';
+        const y=messages.length>2?118:h-185;
+        c.save();c.direction='rtl';c.textAlign='center';c.textBaseline='middle';
+        function badge(text,yPos,size){
+          c.font='600 '+size+"px 'Vazirmatn', Tahoma, sans-serif";
+          const ww=Math.min(w-36,Math.max(85,c.measureText(text).width+28));
+          c.fillStyle='rgba(113,119,131,.48)';c.beginPath();c.roundRect((w-ww)/2,yPos,ww,32,16);c.fill();
+          c.fillStyle='#fff';c.fillText(text,w/2,yPos+16,ww-10);
+        }
+        if(date)badge(date,y,16);
+        if(appSettings.baleShowJoinBanner)badge(join,y+(date?40:0),15);
+        c.restore();
+      };
+      function avatar(c,x,y,r) {
+        c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();
+        const img=appSettings.contactAvatarImg;
+        if(img){let sc=Math.max(2*r/img.width,2*r/img.height);
+          c.drawImage(img,x-img.width*sc/2,y-img.height*sc/2,img.width*sc,img.height*sc);
+        }else{
+          c.fillStyle='#ffb000';c.fillRect(x-r,y-r,2*r,2*r);
+          c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.direction='rtl';
+          c.font="700 26px 'Vazirmatn', Tahoma, sans-serif";
+          c.fillText(String(appSettings.contactName||'م').trim().charAt(0),x,y+1);
+        }c.restore();
+      }
+      drawTelegramTopHeader=function(c,w,typing,time) {
+        if(appSettings.platform!=='bale')return oldHeader(c,w,typing,time);
+        c.save();c.fillStyle='#fafbfd';c.fillRect(0,0,w,92);
+        c.strokeStyle='#dbe1e8';c.lineWidth=1.5;c.beginPath();c.moveTo(0,91);c.lineTo(w,91);c.stroke();
+        const ink='#193457';c.strokeStyle=ink;c.fillStyle=ink;c.lineWidth=2.5;c.lineCap='round';c.lineJoin='round';
+        [32,46,60].forEach(y=>{c.beginPath();c.arc(27,y,2.8,0,Math.PI*2);c.fill();});
+        c.beginPath();c.arc(94,43,14,0,Math.PI*2);c.moveTo(104,54);c.lineTo(115,64);c.stroke();
+        c.beginPath();c.moveTo(150,29);c.quadraticCurveTo(140,44,155,57);
+        c.quadraticCurveTo(163,63,169,54);c.moveTo(155,57);c.lineTo(162,49);c.stroke();
+        c.beginPath();c.roundRect(205,33,25,27,6);c.moveTo(230,40);c.lineTo(244,34);
+        c.lineTo(244,59);c.lineTo(230,52);c.stroke();
+        avatar(c,w-45,46,33);
+        c.fillStyle=ink;c.direction='rtl';c.textAlign='right';c.textBaseline='middle';
+        c.font="700 23px 'Vazirmatn', Tahoma, sans-serif";
+        c.fillText(String(appSettings.contactName||'مخاطب'),w-98,typing?36:48,w-360);
+        if(typing){c.fillStyle='#547ca3';c.font="400 16px 'Vazirmatn', Tahoma, sans-serif";
+          c.fillText('در حال نوشتن...',w-98,68,w-360);}
+        c.restore();
+      };
+      drawTelegramBottomChatBar=function(c,w,h) {
+        if(appSettings.platform!=='bale')return oldBottom(c,w,h);
+        const top=h-74,cy=top+37,ink='#506987';
+        c.save();c.fillStyle='#fafbfd';c.fillRect(0,top,w,74);
+        c.strokeStyle='#dce2e9';c.lineWidth=1.5;c.beginPath();c.moveTo(0,top);c.lineTo(w,top);c.stroke();
+        c.strokeStyle=ink;c.lineWidth=2.4;c.lineCap='round';
+        c.beginPath();c.arc(30,cy,15,0,Math.PI*2);c.moveTo(22,cy);c.lineTo(38,cy);c.moveTo(30,cy-8);c.lineTo(30,cy+8);c.stroke();
+        c.beginPath();c.arc(90,cy,16,0,Math.PI*2);c.moveTo(85,cy-5);c.arc(85,cy-5,1,0,Math.PI*2);
+        c.moveTo(95,cy-5);c.arc(95,cy-5,1,0,Math.PI*2);c.moveTo(82,cy+2);c.quadraticCurveTo(90,cy+14,98,cy+2);c.stroke();
+        let mic=w-29;c.beginPath();c.roundRect(mic-6,cy-15,12,20,6);c.stroke();
+        c.beginPath();c.arc(mic,cy,12,Math.PI,0,true);c.moveTo(mic,cy+12);c.lineTo(mic,cy+17);c.stroke();
+        c.fillStyle='#7a91b3';c.font="400 19px 'Vazirmatn', Tahoma, sans-serif";
+        c.textAlign='right';c.textBaseline='middle';c.direction='rtl';
+        c.fillText('پیام خود را بنویسید...',w-65,cy);
+        c.restore();
+      };
+      function renderTabs() {
+        const selected=appSettings.platform==='bale';
+        ['Telegram','Bale'].forEach(name=>{
+          const b=document.getElementById('platform'+name);if(!b)return;
+          const active=name===(selected?'Bale':'Telegram');
+          b.setAttribute('aria-pressed',String(active));
+          b.className='px-3 py-2 rounded-xl border text-sm font-semibold transition '+(active?'bg-sky-600 border-sky-500 text-white':'bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800');
+        });
+        document.getElementById('baleExtraSettings')?.classList.toggle('hidden',!selected);
+      }
+      window.updatePlatformTabs=renderTabs;
+      window.selectChatPlatform=function(platform){
+        if(!['telegram','bale'].includes(platform)||animState.isExporting)return;
+        appSettings.platform=platform;renderTabs();showStaticFullChat();
+      };
+      window.updateBaleExtras=function(){
+        appSettings.baleDate=document.getElementById('baleDateInput').value.slice(0,30);
+        appSettings.baleShowJoinBanner=document.getElementById('baleJoinNotice').checked;
+        showStaticFullChat();
+      };
+      const panel=document.createElement('section');
+      panel.className='bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl';
+      panel.setAttribute('aria-label','قالب پیام‌رسان');
+      panel.innerHTML='<h2 class="font-bold text-sm text-white mb-3">قالب پیام‌رسان</h2>'+
+        '<div role="group" aria-label="قالب‌های چت" class="grid grid-cols-2 sm:grid-cols-4 gap-2">'+
+        '<button id="platformTelegram" aria-pressed="true" type="button" class="rounded-xl px-3 py-2">تلگرام</button>'+
+        '<button id="platformBale" aria-pressed="false" type="button" class="rounded-xl px-3 py-2">بله</button>'+
+        '<button disabled title="به زودی" class="border rounded-xl px-3 py-2 text-sm bg-slate-950 text-slate-500 border-slate-800">ایتا (به‌زودی)</button>'+
+        '<button disabled title="به زودی" class="border rounded-xl px-3 py-2 text-sm bg-slate-950 text-slate-500 border-slate-800">واتساپ (به‌زودی)</button>'+
+        '</div><div id="baleExtraSettings" class="hidden border-t border-slate-700 mt-3 pt-3 flex items-center flex-wrap gap-3">'+
+        '<label class="text-xs text-slate-300" for="baleDateInput">تاریخ چت</label>'+
+        '<input id="baleDateInput" maxlength="30" value="۲۸ مهر" dir="rtl" class="w-32 bg-slate-950 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5"/>'+
+        '<label class="text-xs text-slate-300 flex items-center gap-2"><input id="baleJoinNotice" type="checkbox" checked/> نمایش «به بله پیوست»</label></div>';
+      document.querySelector('main section').prepend(panel);
+      document.getElementById('platformTelegram').addEventListener('click',()=>selectChatPlatform('telegram'));
+      document.getElementById('platformBale').addEventListener('click',()=>selectChatPlatform('bale'));
+      document.getElementById('baleDateInput').addEventListener('input',updateBaleExtras);
+      document.getElementById('baleJoinNotice').addEventListener('change',updateBaleExtras);
+      renderTabs();
+    })();
     </script>
 </body>
 </html>
