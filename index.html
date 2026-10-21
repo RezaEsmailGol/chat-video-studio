@@ -3404,7 +3404,7 @@
         const p=document.createElement('canvas');
         p.width=p.height=480;
         const g=p.getContext('2d');
-        g.strokeStyle=platform==='whatsapp'?'rgba(158,166,160,0.17)':'rgba(107,76,151,0.26)';
+        g.strokeStyle=platform==='rubika' ? 'rgba(62,128,90,.24)' : platform==='whatsapp'?'rgba(158,166,160,0.17)':'rgba(107,76,151,0.26)';
         g.lineWidth=1.5;
         g.lineCap='round';
         g.lineJoin='round';
@@ -3516,8 +3516,96 @@
         c.fillText('پیامی ارسال کنید یا بر روی استیکر',x,y+83,ww-24);
         c.fillText('خوش‌آمدگویی زیر بزنید.',x,y+114,ww-24);c.restore();
       }
+      // Light Rubika skin, drawn directly on the shared video canvas.
+      function rubikaWallpaper(c,w,h) {
+        if(appSettings.theme==='custom_image'&&appSettings.customBgImage) {
+          previousBackground(c,w,h);
+          return;
+        }
+        // Muted diagonal green/yellow/teal gradient inspired by the reference image.
+        const gradient=c.createLinearGradient(0,0,w,0);
+        gradient.addColorStop(0,'#dce0b8');
+        gradient.addColorStop(.48,'#9bc69f');
+        gradient.addColorStop(1,'#79ae9c');
+        c.fillStyle=gradient;c.fillRect(0,0,w,h);
+        const lower=c.createLinearGradient(0,0,0,h);
+        lower.addColorStop(0,'rgba(238,235,176,.06)');
+        lower.addColorStop(.48,'rgba(132,185,128,.08)');
+        lower.addColorStop(1,'rgba(182,204,104,.24)');
+        c.fillStyle=lower;c.fillRect(0,0,w,h);
+        const warmCorner=c.createRadialGradient(w*1.03,h*.96,25,w*.95,h*.87,w*.91);
+        warmCorner.addColorStop(0,'rgba(243,235,143,.65)');
+        warmCorner.addColorStop(1,'rgba(243,235,143,0)');
+        c.fillStyle=warmCorner;c.fillRect(0,0,w,h);
+        if(!patternCache.rubika)patternCache.rubika=makeDoodlePattern('rubika');
+        c.save();c.globalAlpha=.52;
+        c.fillStyle=c.createPattern(patternCache.rubika,'repeat');
+        c.fillRect(0,0,w,h);c.restore();
+      }
+      function rubikaAvatar(c,x,y,r) {
+        c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();
+        const picture=appSettings.contactAvatarImg;
+        if(picture) {
+          const scale=Math.max(2*r/picture.width,2*r/picture.height);
+          c.drawImage(picture,x-picture.width*scale/2,y-picture.height*scale/2,
+            picture.width*scale,picture.height*scale);
+        } else {
+          const col=c.createLinearGradient(x-r,y-r,x+r,y+r);
+          col.addColorStop(0,'#db79e9');col.addColorStop(1,'#c865d6');
+          c.fillStyle=col;c.fillRect(x-r,y-r,2*r,2*r);
+          const name=String(appSettings.contactName||'مخاطب').trim();
+          const initials=name.replace(/\s+/g,'').slice(0,2)||'بخ';
+          c.fillStyle='#fff';c.textAlign='center';c.textBaseline='middle';c.direction='rtl';
+          c.font="700 24px 'Vazirmatn',Tahoma,sans-serif";c.fillText(initials,x,y+1,2*r-10);
+        }
+        c.restore();
+      }
+      function rubikaTop(c,w,typing) {
+        c.save();
+        c.fillStyle='#fff';c.fillRect(0,0,w,92);
+        c.strokeStyle='#e4e6e7';c.lineWidth=1;
+        c.beginPath();c.moveTo(0,91);c.lineTo(w,91);c.stroke();
+        const ink='#77818b',cy=46;
+        c.strokeStyle=ink;c.fillStyle=ink;c.lineWidth=3;c.lineCap='round';c.lineJoin='round';
+        [31,46,61].forEach(y=>{c.beginPath();c.arc(36,y,3,0,Math.PI*2);c.fill();});
+        c.beginPath();c.arc(113,41,13,0,Math.PI*2);
+        c.moveTo(122,52);c.lineTo(133,64);c.stroke();
+        // Right-facing back arrow at the far right, matching supplied Rubika screenshot.
+        const ax=w-32;
+        c.beginPath();c.moveTo(ax-12,cy);c.lineTo(ax+10,cy);
+        c.moveTo(ax+1,cy-12);c.lineTo(ax+12,cy);c.lineTo(ax+1,cy+12);c.stroke();
+        rubikaAvatar(c,w-102,cy,32);
+        c.direction='rtl';c.textAlign='right';c.textBaseline='middle';
+        c.fillStyle='#15191f';c.font="700 24px 'Vazirmatn',Tahoma,sans-serif";
+        c.fillText(String(appSettings.contactName||'مخاطب'),w-155,typing?38:46,w-298);
+        if(typing) {
+          c.fillStyle='#668a7d';c.font="400 16px 'Vazirmatn',Tahoma,sans-serif";
+          c.fillText('در حال نوشتن...',w-155,67,w-298);
+        }
+        c.restore();
+      }
+      function rubikaBottom(c,w,h) {
+        // Unlike the other skins the composer floats on the patterned wallpaper.
+        const cy=h-39;
+        c.save();
+        c.shadowColor='rgba(18,45,30,.17)';c.shadowBlur=13;c.shadowOffsetY=3;
+        c.fillStyle='#fff';
+        c.beginPath();c.roundRect(22,h-68,w-91,55,16);c.fill();
+        c.beginPath();c.arc(w-34,cy,27,0,Math.PI*2);c.fill();
+        c.shadowBlur=0;c.shadowOffsetY=0;
+        c.strokeStyle='#82909b';c.lineWidth=2.5;c.lineCap='round';c.lineJoin='round';
+        smileIcon(c,57,cy);
+        clipIcon(c,w-103,cy);
+        micIcon(c,w-34,cy);
+        c.direction='rtl';c.textAlign='right';c.textBaseline='middle';
+        c.fillStyle='#99a9b8';c.font="400 19px 'Vazirmatn',Tahoma,sans-serif";
+        c.fillText(String(appSettings.rubikaPlaceholder||'پیام بنویسید...'),
+          w-142,cy,w-230);
+        c.restore();
+      }
       drawTelegramBackground=function(c,w,h) {
         const platform=appSettings.platform;
+        if(platform==='rubika')return rubikaWallpaper(c,w,h);
         if(platform!=='eitaa'&&platform!=='whatsapp')return previousBackground(c,w,h);
         if(appSettings.theme==='custom_image'&&appSettings.customBgImage) {
           previousBackground(c,w,h);
@@ -3569,6 +3657,7 @@
       }
       drawTelegramTopHeader=function(c,w,typing,time) {
         const p=appSettings.platform;
+        if(p==='rubika')return rubikaTop(c,w,typing);
         if(p!=='eitaa'&&p!=='whatsapp')return previousHeader(c,w,typing,time);
         const wa=p==='whatsapp',headerH=92,ink='#f5f6f6';
         c.save();c.fillStyle=wa?'#181b1d':'#232224';c.fillRect(0,0,w,headerH);
@@ -3620,6 +3709,7 @@
       }
       drawTelegramBottomChatBar=function(c,w,h) {
         const p=appSettings.platform;
+        if(p==='rubika')return rubikaBottom(c,w,h);
         if(p!=='eitaa'&&p!=='whatsapp')return previousFooter(c,w,h);
         const wa=p==='whatsapp',top=h-74,cy=top+37;
         c.save();c.fillStyle=wa?'#161819':'#131014';c.fillRect(0,top,w,74);
@@ -3658,6 +3748,13 @@
         button.addEventListener('click',()=>window.selectChatPlatform(spec[0]));
         oldPending[i].replaceWith(button);
       });
+      const rubikaButton=document.createElement('button');
+      rubikaButton.id='platformRubika';rubikaButton.type='button';
+      rubikaButton.textContent='روبیکا';rubikaButton.setAttribute('aria-pressed','false');
+      rubikaButton.addEventListener('click',()=>window.selectChatPlatform('rubika'));
+      group.append(rubikaButton);
+      group.classList.remove('sm:grid-cols-4');
+      group.classList.add('sm:grid-cols-5');
       const options=document.createElement('div');
       options.innerHTML=
         '<div id="eitaaExtraSettings" class="hidden flex flex-wrap items-center gap-3 border-t border-slate-700 pt-3 mt-3">'+
@@ -3673,9 +3770,15 @@
           '<label class="text-xs text-slate-300 flex items-center gap-2"><input id="whatsappEncryptionInput" type="checkbox" checked /> اعلان رمزنگاری نمایشی</label>'+
         '</div>';
       panel.append(...options.children);
+      const rubikaOptions=document.createElement('div');
+      rubikaOptions.id='rubikaExtraSettings';
+      rubikaOptions.className='hidden flex flex-wrap items-center gap-3 border-t border-slate-700 pt-3 mt-3';
+      rubikaOptions.innerHTML='<label for="rubikaPlaceholderInput" class="text-xs text-slate-300">متن راهنمای کادر روبیکا</label>'+
+        '<input id="rubikaPlaceholderInput" type="text" maxlength="90" value="پیام بنویسید..." class="min-w-40 flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />';
+      panel.append(rubikaOptions);
       function renderAllTabs() {
-        const selected=['telegram','bale','eitaa','whatsapp'].includes(appSettings.platform)?appSettings.platform:'telegram';
-        const names={telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp'};
+        const selected=['telegram','bale','eitaa','whatsapp','rubika'].includes(appSettings.platform)?appSettings.platform:'telegram';
+        const names={telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp',rubika:'Rubika'};
         Object.entries(names).forEach(([key,suffix])=>{
           const button=document.getElementById('platform'+suffix);
           if(!button)return;
@@ -3684,16 +3787,17 @@
           button.className='px-3 py-2 rounded-xl border text-sm font-semibold transition '+
              (active?(key==='whatsapp'?'bg-emerald-700 border-emerald-500 text-white':
                        key==='eitaa'?'bg-purple-700 border-purple-500 text-white':
+                       key==='rubika'?'bg-gradient-to-r from-emerald-600 to-lime-600 border-lime-500 text-white':
                        'bg-sky-600 border-sky-500 text-white'):
                        'bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-800');
         });
-        [['bale','baleExtraSettings'],['eitaa','eitaaExtraSettings'],['whatsapp','whatsappExtraSettings']].forEach(([key,id])=>{
+        [['bale','baleExtraSettings'],['eitaa','eitaaExtraSettings'],['whatsapp','whatsappExtraSettings'],['rubika','rubikaExtraSettings']].forEach(([key,id])=>{
           document.getElementById(id)?.classList.toggle('hidden',selected!==key);
         });
       }
       window.updatePlatformTabs=renderAllTabs;
       window.selectChatPlatform=function(platform) {
-        if(!['telegram','bale','eitaa','whatsapp'].includes(platform)||animState.isExporting)return;
+        if(!['telegram','bale','eitaa','whatsapp','rubika'].includes(platform)||animState.isExporting)return;
         appSettings.platform=platform;
         renderAllTabs();
         showStaticFullChat();
@@ -3704,9 +3808,10 @@
         appSettings.whatsappStatus=document.getElementById('whatsappStatusInput').value.slice(0,80);
         appSettings.whatsappDate=document.getElementById('whatsappDateInput').value.slice(0,30);
         appSettings.whatsappShowEncryption=document.getElementById('whatsappEncryptionInput').checked;
+        appSettings.rubikaPlaceholder=document.getElementById('rubikaPlaceholderInput').value.slice(0,90);
         showStaticFullChat();
       }
-      ['eitaaStatusInput','eitaaEmptyInput','whatsappStatusInput','whatsappDateInput','whatsappEncryptionInput']
+      ['eitaaStatusInput','eitaaEmptyInput','whatsappStatusInput','whatsappDateInput','whatsappEncryptionInput','rubikaPlaceholderInput']
         .forEach(id=>{
           const node=document.getElementById(id);
           node.addEventListener(node.type==='checkbox'?'change':'input',updateMessengerOptions);
