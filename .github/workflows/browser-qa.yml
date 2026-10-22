@@ -33,7 +33,9 @@ jobs:
             const page = await context.newPage();
             const pageErrors=[];
             page.on('pageerror',error=>pageErrors.push(error.message));
-            page.on('console',message=>{if(message.type()==='error') console.log('Browser console:',message.text().slice(0,300))});
+            page.on('console',message=>{
+              if(['error','warning'].includes(message.type())) console.log('Browser console:',message.type(),message.text().slice(0,350));
+            });
             page.on('response',response=>{
               if(response.status()>=400)console.log('BROWSER HTTP ERROR',response.status(),response.url());
             });
@@ -49,6 +51,13 @@ jobs:
               ];
               renderMessagesListUI();showStaticFullChat();
             });
+            const capabilities=await page.evaluate(async()=>({
+              videoEncoder:typeof VideoEncoder,mp4Muxer:typeof Mp4Muxer,
+              mediaRecorder:typeof MediaRecorder,
+              h264:typeof VideoEncoder==='undefined'?null:
+                (await VideoEncoder.isConfigSupported({codec:'avc1.420028',width:750,height:1334,bitrate:3500000,framerate:30})).supported
+            }));
+            console.log('BROWSER CODEC CAPABILITIES',JSON.stringify(capabilities));
             const names={telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp',rubika:'Rubika'};
             for(const [platform,suffix] of Object.entries(names)){
               await page.locator('#platform'+suffix).click();
@@ -90,9 +99,45 @@ jobs:
               assert.ok(result.bytes>2048,'tiny or empty output');
               assert.ok(['mp4','webm'].includes(result.ext),'unexpected format');
               assert.ok(result.filename.endsWith('.'+result.ext),'wrong extension');
-              console.log('EXPORT PASS',platform,JSON.stringify(result));
+              const playback=await page.evaluate(async()=>{
+                const video=document.getElementById('exportedVideoPreview');
+                if(video.readyState<1)await new Promise((resolve,reject)=>{
+                  video.addEventListener('loadedmetadata',resolve,{once:true});
+                  video.addEventListener('error',()=>reject(new Error('Video decoder rejected file')),{once:true});
+                  setTimeout(()=>reject(new Error('Video metadata timeout')),6000);
+                });
+                return {duration:video.duration,width:video.videoWidth,height:video.videoHeight};
+              });
+              assert.ok(playback.duration>1.2&&playback.duration<10,'bad video duration');
+              assert.equal(playback.width,750,'unexpected encoded width');
+              assert.equal(playback.height,1334,'unexpected encoded height');
+              console.log('EXPORT PASS',platform,JSON.stringify({...result,playback}));
               await page.evaluate(()=>closeExportModal());
             }
+            // Force MediaRecorder's WebM branch to verify honest extension and playback.
+            await page.evaluate(()=>{
+              appSettings.soundEffects=true;
+              window.__qaMuxer=window.Mp4Muxer;window.Mp4Muxer=undefined;
+              window.__qaSupports=MediaRecorder.isTypeSupported;
+              MediaRecorder.isTypeSupported = mime => mime.startsWith('video/webm') && window.__qaSupports.call(MediaRecorder,mime);
+            });
+            await page.evaluate(()=>exportChatVideoMP4());
+            const fallback=await page.evaluate(async()=>{
+              const blob=await(await fetch(window.lastChatVideoObjectUrl)).blob();
+              const ext=await identifyVideoContainer(blob);
+              const bytes=blob.size;
+              const filename=document.getElementById('downloadVideoLink').download;
+              window.Mp4Muxer=window.__qaMuxer;
+              MediaRecorder.isTypeSupported=window.__qaSupports;
+              appSettings.soundEffects=false;
+              return {ext,bytes,filename};
+            });
+            assert.equal(fallback.ext,'webm','Forced WebM recorded wrong format');
+            assert.ok(fallback.filename.endsWith('.webm'));
+            assert.ok(fallback.bytes>2048);
+            console.log('WEBM + AUDIO ENABLED PASS',JSON.stringify(fallback));
+            await page.evaluate(()=>closeExportModal());
+
             // Narrow screen UI should still show preview and tabs.
             await page.setViewportSize({width:390,height:844});
             await page.locator('#platformRubika').click();
