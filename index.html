@@ -656,6 +656,12 @@
                     </div>
                 </div>
             </div>
+            <div id="studioBrowserCheck" class="studio-browser-check w-full mt-3" role="status" aria-live="polite">
+                <i class="fa-solid fa-circle-info text-cyan-300" aria-hidden="true"></i>
+                <strong>وضعیت مرورگر:</strong>
+                <span id="studioBrowserStatus">در حال بررسی قابلیت‌های خروجی...</span>
+                <button type="button" onclick="checkStudioBrowserCompatibility()" aria-label="بررسی دوباره پشتیبانی خروجی ویدیو در مرورگر">بررسی دوباره</button>
+            </div>
         </section>
     </main>
 
@@ -4372,6 +4378,32 @@
       }
       if(document.readyState==='complete') enhanceProjectBar();
       else window.addEventListener('load',enhanceProjectBar,{once:true});
+      // Browser capability check is advisory, not a promise of successful encoding.
+      window.checkStudioBrowserCompatibility=function(){
+        const target=document.getElementById('studioBrowserStatus');
+        if(!target)return;
+        const capture=typeof HTMLCanvasElement!=='undefined' &&
+          typeof HTMLCanvasElement.prototype.captureStream==='function';
+        const recorder=typeof MediaRecorder!=='undefined';
+        const supported=mime=>{
+          try{return recorder && MediaRecorder.isTypeSupported(mime);}
+          catch(_){return false;}
+        };
+        const mp4Recorder=supported('video/mp4')||supported('video/mp4;codecs=avc1');
+        const webm=supported('video/webm')||supported('video/webm;codecs=vp8');
+        const mp4Codec=typeof VideoEncoder!=='undefined'&&typeof Mp4Muxer!=='undefined';
+        if(!capture || (!recorder&&!mp4Codec)) {
+          target.textContent='خروجی PNG آماده است؛ ضبط ویدیو در این مرورگر محدود یا ناموجود است.';
+        } else if(mp4Recorder || mp4Codec){
+          target.textContent='پشتیبانی اولیه از MP4 شناسایی شد؛ خروجی واقعی را پیش از انتشار بررسی کنید.';
+        } else if(webm){
+          target.textContent='ضبط WebM محتمل است؛ برای MP4 از Chrome/Edge جدید هم تست بگیرید.';
+        } else {
+          target.textContent='Canvas قابل ضبط است، اما کدک سازگار شناسایی نشد؛ خروجی را آزمایش کنید.';
+        }
+        return {capture,recorder,mp4Recorder,mp4Codec,webm};
+      };
+      window.checkStudioBrowserCompatibility();
       window.updatePlatformTabs();
     })();
     </script>
