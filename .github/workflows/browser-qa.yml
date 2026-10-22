@@ -195,6 +195,14 @@ jobs:
                 assert.ok(result.imageOk);
                 console.log('CROSS PREVIEW PASS',name,p);
               }
+              // Headless Linux WebKit crashed while attempting MediaRecorder in an
+              // exploratory run; do not imply Safari video export is certified.
+              if(name==='webkit') {
+                console.log('WEBKIT VIDEO EXPORT UNVERIFIED (headless Linux engine crashed during exploratory recording)');
+                assert.equal(errs.length,0,'WebKit preview JavaScript errors');
+                await browser.close();
+                continue;
+              }
               await page.evaluate(()=>exportChatVideoMP4());
               const exportResult=await page.evaluate(async()=>{
                 const url=window.lastChatVideoObjectUrl;
