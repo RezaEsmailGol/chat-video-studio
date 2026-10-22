@@ -764,6 +764,95 @@
         ];
 
         let messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
+
+        // Version-one differentiator: ready-to-use Persian stories plus safe
+        // session-scoped Undo/Redo. No libraries or server storage required.
+        const studioScenes = {
+            product: [
+                ['right','سلام، این محصول چه ویژگی‌هایی داره؟ 🛍️'],
+                ['left','سلام! طراحی کاربردی، رنگ‌بندی متنوع و کیفیت مناسب استفاده روزمره داره ✨'],
+                ['right','می‌تونم رنگ‌ها رو ببینم؟'],
+                ['left','حتماً! تصاویر و مشخصات هر مدل رو در صفحه محصول ببینید 📸'],
+                ['right','برای ثبت سفارش باید چیکار کنم؟'],
+                ['left','مدل دلخواه رو انتخاب کن و از طریق فروشگاه سفارش رو ثبت کن ✅']
+            ],
+            support: [
+                ['right','سلام، سفارشم رو چطور پیگیری کنم؟'],
+                ['left','سلام! خوشحالیم که پیام دادی 🌱'],
+                ['right','سفارشم ثبت شده ولی از وضعیت ارسال خبر ندارم.'],
+                ['left','کد سفارش رو از بخش سفارش‌های حساب کاربری بررسی کن.'],
+                ['right','اگر مشکل ادامه داشت چی؟'],
+                ['left','از بخش پشتیبانی فروشگاه درخواست ثبت کن تا همکاران بررسی کنند ✅']
+            ],
+            education: [
+                ['right','سلام! امروز چی یاد می‌گیریم؟ 📚'],
+                ['left','یک نکته ساده: پیام خوب، کوتاه و واضح است.'],
+                ['right','برای ساخت ویدیوی آموزشی از کجا شروع کنم؟'],
+                ['left','اول سناریو رو به چند پیام کوتاه تقسیم کن. ✍️'],
+                ['right','بعدش چی؟'],
+                ['left','زمان‌بندی رو تنظیم کن، پیش‌نمایش بگیر و خروجی ویدیو بساز 🎬']
+            ]
+        };
+        const undoHistory=[], redoHistory=[];
+        const HISTORY_LIMIT=25;
+        let lastEditGroup=null, lastEditAt=0;
+        function cloneChatMessages() { return messages.map(message=>({...message})); }
+        function refreshUndoUI() {
+            const undo=document.getElementById('studioUndo');
+            const redo=document.getElementById('studioRedo');
+            if(undo)undo.disabled=undoHistory.length===0 || animState.isExporting;
+            if(redo)redo.disabled=redoHistory.length===0 || animState.isExporting;
+        }
+        function rememberChatEdit(group=null) {
+            if(animState.isExporting)return;
+            const now=Date.now();
+            if(!(group && lastEditGroup===group && now-lastEditAt<1200)){
+                undoHistory.push(cloneChatMessages());
+                if(undoHistory.length>HISTORY_LIMIT)undoHistory.shift();
+                redoHistory.length=0;
+            }
+            lastEditGroup=group;lastEditAt=now;
+            refreshUndoUI();
+        }
+        function restoreChatHistory(direction) {
+            if(animState.isExporting)return;
+            const source=direction==='undo'?undoHistory:redoHistory;
+            const target=direction==='undo'?redoHistory:undoHistory;
+            if(!source.length)return;
+            target.push(cloneChatMessages());
+            if(target.length>HISTORY_LIMIT)target.shift();
+            messages=source.pop().map(message=>({...message}));
+            lastEditGroup=null;
+            stopPreviewAnimation();renderMessagesListUI();showStaticFullChat();
+            window.persistChatListChange?.({
+                cleared:messages.length===0,
+                resetDemo:messages.length>0
+            });
+            refreshUndoUI();
+        }
+        window.studioUndo=()=>restoreChatHistory('undo');
+        window.studioRedo=()=>restoreChatHistory('redo');
+        window.studioResetUndo=()=>{
+            undoHistory.length=0;redoHistory.length=0;lastEditGroup=null;refreshUndoUI();
+        };
+        function loadStudioScenario(kind) {
+            const sample=studioScenes[kind];
+            if(!sample || animState.isExporting)return;
+            if(messages.length && !window.confirm('سناریوی انتخاب‌شده جایگزین پیام‌های فعلی شود؟ تغییر قبلی با «بازگشت» قابل بازیابی است.'))return;
+            rememberChatEdit();
+            stopPreviewAnimation();
+            messages=sample.map(([side,text],i)=>({
+                id:'scene_'+kind+'_'+i+'_'+Date.now(),
+                side,text,time:'10:'+String(10+i).padStart(2,'0'),delaySec:1.5,
+                replyName:'',replyText:'',mediaType:null,mediaDataUrl:null
+            }));
+            renderMessagesListUI();showStaticFullChat();
+            window.persistChatListChange?.({resetDemo:true});
+            document.getElementById('studioSceneInfo').textContent=
+                'سناریو بارگذاری شد. متن‌ها قابل ویرایش‌اند و می‌توانی هر قالب پیام‌رسانی را انتخاب کنی.';
+        }
+        window.loadStudioScenario=loadStudioScenario;
+
         let composerSide = 'left';
 
         let appSettings = {
@@ -2500,6 +2589,7 @@
             const delaySec = Math.max(0.3, parseFloat(delayEl.value) || 1.5);
             const hasReply = hasReplyEl.checked;
 
+            rememberChatEdit();
             messages.push({
                 id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                 side,
@@ -2818,6 +2908,7 @@
 
         function removeMessageMedia(index) {
             if (!messages[index]) return;
+            rememberChatEdit();
             messages[index].mediaType = null;
             messages[index].mediaImg = null;
             messages[index].mediaVideo = null;
@@ -2952,6 +3043,7 @@
 
         function updateMessageField(index, field, value) {
             if (!messages[index]) return;
+            if(messages[index][field]!==value)rememberChatEdit('message:'+index+':'+field);
             messages[index][field] = value;
             if (field === 'replyName' && value.trim() !== '') {
                 const headerInput = document.getElementById('settingContactName');
@@ -2968,6 +3060,7 @@
         function updateMessageDelay(index, value) {
             if (!messages[index]) return;
             const sec = Math.max(0.2, parseFloat(value) || 1.5);
+            if(messages[index].delaySec!==sec)rememberChatEdit('delay:'+index);
             messages[index].delaySec = sec;
             const badge = document.getElementById('msgCountBadge');
             if (badge) {
@@ -2980,6 +3073,7 @@
             const globalSec = parseFloat(document.getElementById('settingSpeed').value) || 1.5;
             appSettings.msgIntervalMs = Math.round(globalSec * 1000);
             document.getElementById('newMsgDelay').value = globalSec;
+            rememberChatEdit();
             messages.forEach(m => {
                 m.delaySec = globalSec;
             });
@@ -2989,6 +3083,7 @@
 
         function toggleMessageSide(index) {
             if (!messages[index]) return;
+            rememberChatEdit();
             messages[index].side = messages[index].side === 'left' ? 'right' : 'left';
             renderMessagesListUI();
             renderChatFrame(null);
@@ -2997,6 +3092,7 @@
         function moveMessage(index, delta) {
             const target = index + delta;
             if (target < 0 || target >= messages.length) return;
+            rememberChatEdit();
             const temp = messages[index];
             messages[index] = messages[target];
             messages[target] = temp;
@@ -3006,6 +3102,7 @@
 
         function deleteMessage(index) {
             if (!messages[index]) return;
+            rememberChatEdit();
             messages.splice(index, 1);
             renderMessagesListUI();
             renderChatFrame(null);
@@ -3014,6 +3111,7 @@
 
         function clearAllMessages() {
             if (messages.length && !window.confirm('همه پیام‌های این پروژه حذف شوند؟ برای جلوگیری از حذف ناخواسته ابتدا از پروژه JSON بگیرید.')) return;
+            rememberChatEdit();
             stopPreviewAnimation();
             messages = [];
             renderMessagesListUI();
@@ -3024,6 +3122,7 @@
 
         function resetToDefaultScreenshotChat() {
             if (messages.length && !window.confirm('پیام‌های فعلی با گفت‌وگوی نمونه جایگزین شوند؟ برای حفظ پیام‌ها ابتدا فایل JSON را دانلود کنید.')) return;
+            rememberChatEdit();
             stopPreviewAnimation();
             messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
             renderMessagesListUI();
