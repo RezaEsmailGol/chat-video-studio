@@ -195,6 +195,30 @@
             #chatCanvas { width:auto; height:auto; max-width:100%; object-fit:contain; }
             .studio-header-actions { grid-template-columns: 1fr 1fr; }
         }
+
+        .studio-mobile-nav { display:none; }
+        @media (max-width:767px) {
+            body { padding-bottom: 86px; }
+            .studio-mobile-nav {
+                display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+                align-items:stretch;gap:.4rem;position:fixed;bottom:0;
+                left:0;right:0;z-index:20;
+                padding:.55rem max(.75rem, env(safe-area-inset-right))
+                    max(.55rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+                border-top:1px solid rgba(148,163,184,.25);
+                background:rgba(12,20,35,.96);
+                box-shadow:0 -10px 32px rgba(0,0,0,.23);
+                backdrop-filter:blur(12px);
+            }
+            .studio-mobile-nav a,.studio-mobile-nav button {
+                color:#dbeafe;display:flex;align-items:center;justify-content:center;
+                gap:.35rem;min-height:46px;border-radius:.7rem;
+                font-size:.76rem;font-weight:600;background:#1e293b;
+                border:1px solid #334155;text-decoration:none;
+            }
+            .studio-mobile-nav button { background:#047857;border-color:#059669;color:white; }
+            #studioPreview,#studioEditor { scroll-margin-top:12px; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -664,6 +688,13 @@
             </div>
         </section>
     </main>
+
+    <!-- Mobile shortcut bar; hidden on desktop and behind the export modal. -->
+    <nav id="studioMobileNav" class="studio-mobile-nav" aria-label="دسترسی سریع موبایل">
+        <a href="#studioEditor" aria-label="رفتن به بخش ویرایش پیام‌ها"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span>ویرایش</span></a>
+        <a href="#studioPreview" aria-label="رفتن به پیش‌نمایش ویدیو"><i class="fa-solid fa-eye" aria-hidden="true"></i><span>پیش‌نمایش</span></a>
+        <button type="button" onclick="exportChatVideoMP4()" aria-label="ساخت فایل ویدیویی"><i class="fa-solid fa-film" aria-hidden="true"></i><span>خروجی ویدیو</span></button>
+    </nav>
 
     <!-- Public GitHub repository, always visible at the bottom of the app. -->
     <footer class="w-full max-w-7xl mx-auto px-4 lg:px-8 pb-7 pt-2" role="contentinfo">
