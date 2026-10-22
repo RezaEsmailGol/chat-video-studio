@@ -57,7 +57,7 @@ jobs:
                 return {platform:appSettings.platform,width:c.width,height:c.height,
                   png:c.toDataURL('image/png').slice(0,35),
                   pixel:Array.from(c.getContext('2d').getImageData(c.width/2,120,1,1).data),
-                  tabSelected:document.getElementById('platform'+appSettings.platform[0].toUpperCase()+appSettings.platform.slice(1))?.getAttribute('aria-pressed')};
+                  tabSelected:document.getElementById('platform'+({telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp',rubika:'Rubika'}[appSettings.platform]))?.getAttribute('aria-pressed')};
               });
               assert.equal(state.platform,platform);
               assert.equal(state.tabSelected,'true');
