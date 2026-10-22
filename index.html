@@ -2057,7 +2057,8 @@
             progressView.classList.remove('hidden');
             resultView.classList.add('hidden');
             recBadge.classList.remove('hidden');
-            modalTitle.textContent = 'در حال رندر و ساخت فایل MP4...';
+            modalTitle.textContent = 'در حال ساخت ویدیو...';
+            document.getElementById('exportProgressStatus').textContent = 'آماده‌سازی فریم‌ها و کدک ویدیو...';
             progressFill.style.width = '0%';
             percentText.textContent = '0%';
 
@@ -2095,10 +2096,20 @@
             const totalDurationMs = getTotalAnimationDuration();
             const totalFrames = Math.ceil((totalDurationMs / 1000) * fps);
             const sampleRate = 48000;
+            const videoConfig = {
+                codec: 'avc1.420028', // H.264 baseline level 4.0: supports 750×1334 portrait canvas.
+                width: W, height: H, bitrate: 3_500_000,
+                framerate: fps
+            };
+            const supported = await VideoEncoder.isConfigSupported(videoConfig);
+            if (!supported || !supported.supported) {
+                throw new Error('H.264 MP4 encoder is unavailable for this canvas size');
+            }
+            document.getElementById('exportProgressStatus').textContent = 'رندر MP4 با H.264...';
 
             // Check if AudioEncoder with AAC is supported so we can mux a real audio track into the MP4
             let useWebCodecsAudio = false;
-            if (typeof window.AudioEncoder !== 'undefined' && typeof window.AudioData !== 'undefined') {
+            if (appSettings.soundEffects && typeof window.AudioEncoder !== 'undefined' && typeof window.AudioData !== 'undefined') {
                 try {
                     const support = await AudioEncoder.isConfigSupported({
                         codec: 'mp4a.40.2',
@@ -2143,13 +2154,7 @@
                 error: (e) => console.error('VideoEncoder error:', e)
             });
 
-            videoEncoder.configure({
-                codec: 'avc1.42001f',
-                width: W,
-                height: H,
-                bitrate: 3_500_000,
-                framerate: fps
-            });
+            videoEncoder.configure(videoConfig);
 
             let audioEncoder = null;
             if (useWebCodecsAudio) {
@@ -2193,6 +2198,8 @@
                 const videoFrame = new VideoFrame(canvas, { timestamp: timestampUs });
                 videoEncoder.encode(videoFrame, { keyFrame: frameIdx % 30 === 0 });
                 videoFrame.close();
+                // Cap asynchronous encode queues on slower machines.
+                if (videoEncoder.encodeQueueSize > 20) await videoEncoder.flush();
 
                 if (frameIdx % 4 === 0 || frameIdx === totalFrames) {
                     const pct = Math.round((frameIdx / totalFrames) * 100);
@@ -2210,24 +2217,33 @@
 
             const { buffer } = muxer.target;
             const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
+            const actualContainer = await identifyVideoContainer(mp4Blob);
+            if (actualContainer !== 'mp4') throw new Error('MP4 encoder produced an invalid container');
+            videoEncoder.close();
+            if (audioEncoder) audioEncoder.close();
             presentExportedVideo(mp4Blob, 'mp4');
         }
 
         async function renderWithMediaRecorder(progressFill, percentText) {
-            ensureAudioContext();
-            const canvasStream = canvas.captureStream(60);
+            if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+                throw new Error('This browser does not support recording from Canvas');
+            }
+            if (appSettings.soundEffects) ensureAudioContext();
+            const canvasStream = canvas.captureStream(30);
+            document.getElementById('exportProgressStatus').textContent = 'ضبط ویدیوی جایگزین در زمان واقعی...';
 
-            if (audioDest) {
-                const audioTracks = audioDest.stream.getAudioTracks();
-                audioTracks.forEach(t => canvasStream.addTrack(t));
+            if (appSettings.soundEffects && audioDest) {
+                audioDest.stream.getAudioTracks().forEach(track => canvasStream.addTrack(track.clone()));
             }
 
             const mimeCandidates = [
                 'video/mp4;codecs=avc1,mp4a.40.2',
                 'video/mp4;codecs=avc1',
                 'video/mp4',
-                'video/webm;codecs=h264',
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
                 'video/webm;codecs=vp9',
+                'video/webm;codecs=vp8',
                 'video/webm'
             ];
 
@@ -2239,9 +2255,15 @@
                 }
             }
 
-            const recorder = chosenMime
-                ? new MediaRecorder(canvasStream, { mimeType: chosenMime, videoBitsPerSecond: 3500000 })
-                : new MediaRecorder(canvasStream);
+            let recorder;
+            try {
+                recorder = chosenMime
+                    ? new MediaRecorder(canvasStream, { mimeType: chosenMime, videoBitsPerSecond: 3_500_000 })
+                    : new MediaRecorder(canvasStream);
+            } catch (err) {
+                canvasStream.getTracks().forEach(track => track.stop());
+                throw err;
+            }
 
             const chunks = [];
             recorder.ondataavailable = (e) => {
@@ -2290,12 +2312,27 @@
                 requestAnimationFrame(step);
             });
 
-            recorder.stop();
-            const videoBlob = await recordingFinished;
-            const actualType = videoBlob.type.toLowerCase();
-            const extension = actualType.includes('mp4') ? 'mp4' : actualType.includes('webm') ? 'webm' : null;
-            if (!extension) throw new Error('Unknown video container: ' + actualType);
-            presentExportedVideo(videoBlob, extension);
+            try {
+                if (recorder.state !== 'inactive') recorder.stop();
+                const videoBlob = await recordingFinished;
+                const extension = await identifyVideoContainer(videoBlob);
+                if (!extension) throw new Error('Recording is not a valid MP4 or WebM file');
+                presentExportedVideo(videoBlob, extension);
+            } finally {
+                if (recorder.state !== 'inactive') recorder.stop();
+                canvasStream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        async function identifyVideoContainer(blob) {
+            if (!blob || blob.size < 16) return null;
+            const first = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+            // ISO BMFF: bytes 4..7 identify an MP4 file type box.
+            if (String.fromCharCode(...first.slice(4, 8)) === 'ftyp') return 'mp4';
+            // Matroska/WebM uses an EBML header.
+            if (first[0] === 0x1a && first[1] === 0x45 &&
+                first[2] === 0xdf && first[3] === 0xa3) return 'webm';
+            return null;
         }
 
         function presentExportedVideo(blob, ext = 'mp4') {
@@ -2307,7 +2344,7 @@
 
             progressView.classList.add('hidden');
             resultView.classList.remove('hidden');
-            modalTitle.textContent = 'ویدیو چت تلگرام آماده شد!';
+            modalTitle.textContent = 'ویدیوی چت آماده شد!';
 
             if (window.lastChatVideoObjectUrl) URL.revokeObjectURL(window.lastChatVideoObjectUrl);
             const url = URL.createObjectURL(blob);
@@ -2322,7 +2359,7 @@
             videoEl.play().catch(() => {});
 
             downloadLink.href = url;
-            downloadLink.download = `telegram-chat-${Date.now()}.${ext}`;
+            downloadLink.download = `chat-${appSettings.platform}-${Date.now()}.${ext}`;
         }
 
         function closeExportModal() {
@@ -2337,7 +2374,7 @@
             const dataUrl = canvas.toDataURL('image/png');
             const a = document.createElement('a');
             a.href = dataUrl;
-            a.download = `telegram-chat-image-${Date.now()}.png`;
+            a.download = `chat-${appSettings.platform}-${Date.now()}.png`;
             a.click();
         }
 
