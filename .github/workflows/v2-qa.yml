@@ -1,0 +1,154 @@
+name: V2 Delivery & Project Library QA (temporary)
+on:
+  push:
+    branches: [feat/initial-studio-and-projects]
+permissions:
+  contents: read
+jobs:
+  v2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium and Firefox
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium firefox
+      - name: Test project library, script generator, exports and layouts
+        run: |
+          python3 -m http.server 8153 >/tmp/studio.log 2>&1 &
+          node <<'NODE'
+          const {chromium,firefox}=require('playwright');
+          const assert=require('node:assert/strict');
+          async function testBrowser(label,engine){
+            const browser=await engine.launch({headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:1280,height:900}});
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8153/',{waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>window.chatStudioReady&&window.studioProjectActions&&window.studioExportState&&document.getElementById('studioMusicStatus'),null,{timeout:30000});
+            await page.evaluate(()=>window.chatStudioReady);
+            assert.equal(await page.evaluate(()=>messages.length),10);
+            await page.waitForFunction(()=>document.getElementById('studioProjectsSelect').options.length>=1);
+            console.log('V2 INITIAL PASS',label);
+            // Generate an editable, explicitly non-AI Persian script.
+            await page.locator('#studioScriptTopic').fill('کیف ماگ سفری');
+            await page.locator('#studioScriptAudience').fill('دانشجوها');
+            await page.locator('#studioScriptCallToAction').fill('از سایت ما بازدید کن');
+            page.once('dialog',d=>d.accept());
+            await page.locator('button[onclick="generateOfflinePersianScenario()"]').click();
+            assert.equal(await page.evaluate(()=>messages.length),8);
+            assert.match(await page.evaluate(()=>messages[0].text),/کیف ماگ سفری/);
+            await page.locator('#studioUndo').click();
+            assert.equal(await page.evaluate(()=>messages.length),10);
+            console.log('V2 OFFLINE SCRIPT + UNDO PASS',label);
+            // Project management must persist separate, selected copies.
+            page.once('dialog',d=>d.accept());
+            await page.locator('#studioNewProject').click();
+            await page.waitForFunction(()=>document.getElementById('studioProjectsSelect').options.length>=2);
+            assert.equal(await page.evaluate(()=>messages.length),0);
+            const newId=await page.evaluate(()=>document.getElementById('studioProjectsSelect').value);
+            await page.locator('#projectName').fill('پروژه تست ویدیو');
+            await page.locator('#saveProject').click();
+            await page.locator('#studioScriptTopic').fill('آموزش جدید');
+            await page.locator('button[onclick="generateOfflinePersianScenario()"]').click();
+            assert.equal(await page.evaluate(()=>messages.length),8);
+            await page.locator('#saveProject').click();
+            await page.locator('#studioDuplicateProject').click();
+            await page.waitForFunction(()=>document.getElementById('studioProjectsSelect').options.length>=3);
+            const dupId=await page.evaluate(()=>document.getElementById('studioProjectsSelect').value);
+            assert.notEqual(newId,dupId);
+            const items=await page.evaluate(()=>Array.from(document.getElementById('studioProjectsSelect').options).map(o=>o.value));
+            assert.ok(items.includes('main'));
+            await page.locator('#studioProjectsSelect').selectOption('main');
+            await page.locator('#studioOpenProject').click();
+            assert.equal(await page.evaluate(()=>messages.length),10);
+            await page.locator('#studioProjectsSelect').selectOption(newId);
+            await page.locator('#studioOpenProject').click();
+            assert.equal(await page.evaluate(()=>messages.length),8);
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.evaluate(()=>window.chatStudioReady);
+            assert.equal(await page.evaluate(()=>messages.length),8);
+            console.log('V2 MULTI PROJECT SAVE/SWITCH/RELOAD PASS',label);
+            await page.locator('#studioProjectsSelect').selectOption(dupId);
+            page.once('dialog',d=>d.accept());
+            await page.locator('#studioDeleteProject').click();
+            await page.waitForFunction(id=>!Array.from(document.getElementById('studioProjectsSelect').options).some(o=>o.value===id),dupId);
+            console.log('V2 PROJECT DELETE PASS',label);
+            // Every delivery preset must produce a correct sized canvas, with no clipping.
+            for(const [aspect,quality,width,height] of [
+              ['portrait','standard',750,1334],
+              ['portrait','high',1080,1920],
+              ['square','standard',720,720],
+              ['square','high',1080,1080],
+              ['landscape','standard',1280,720],
+              ['landscape','high',1920,1080]
+            ]){
+              await page.locator('#studioAspect').selectOption(aspect);
+              await page.locator('#studioQuality').selectOption(quality);
+              const result=await page.evaluate(()=>{
+                renderChatFrame(null);
+                const out=composeStudioFrame();
+                return {size:[out.width,out.height],png:out.toDataURL('image/png').startsWith('data:image/png;base64,')};
+              });
+              assert.deepEqual(result.size,[width,height]);
+              assert.ok(result.png);
+              console.log('V2 COMPOSE PASS',label,aspect,quality,width,height);
+            }
+            await page.locator('#studioGreenScreen').check();
+            await page.locator('#studioWatermark').fill('رضا اسماعیل گل');
+            const green=await page.evaluate(()=>{
+              animState.isExporting=true;renderChatFrame(0);
+              const img=composeStudioFrame().getContext('2d').getImageData(8,100,1,1).data;
+              animState.isExporting=false;
+              return {pixel:Array.from(img),state:window.studioExportState()};
+            });
+            assert.equal(green.state.green,true);
+            assert.equal(green.state.watermark,'رضا اسماعیل گل');
+            console.log('V2 GREEN/WATERMARK PASS',label,JSON.stringify(green));
+            await page.locator('#studioGreenScreen').uncheck();
+            await page.locator('#studioQuality').selectOption('standard');
+            await page.locator('#studioAspect').selectOption('square');
+            // Composite video must actually decode with square metadata.
+            if(label==='chromium'){
+              await page.evaluate(()=>{
+                appSettings.showTyping=false;appSettings.soundEffects=false;
+                messages=messages.slice(0,2).map(m=>({...m,delaySec:.35}));
+                renderMessagesListUI();showStaticFullChat();
+              });
+              await page.evaluate(()=>exportChatVideoMP4());
+              const result=await page.evaluate(async()=>{
+                if(!window.lastChatVideoObjectUrl)return {error:document.getElementById('exportProgressStatus').textContent};
+                const video=document.getElementById('exportedVideoPreview');
+                if(video.readyState<1)await new Promise((res,rej)=>{
+                  video.addEventListener('loadedmetadata',res,{once:true});
+                  video.addEventListener('error',rej,{once:true});
+                  setTimeout(()=>rej(new Error('Metadata decode timeout')),5000);
+                });
+                const blob=await(await fetch(window.lastChatVideoObjectUrl)).blob();
+                return {w:video.videoWidth,h:video.videoHeight,duration:video.duration,
+                  ext:await identifyVideoContainer(blob),bytes:blob.size};
+              });
+              assert.equal(result.w,720);assert.equal(result.h,720);
+              assert.ok(['mp4','webm'].includes(result.ext),JSON.stringify(result));
+              assert.ok(result.duration>1&&result.bytes>2048);
+              console.log('V2 ENCODED SQUARE VIDEO PASS',JSON.stringify(result));
+            }
+            for(const width of [320,390,768,1280]){
+              await page.setViewportSize({width,height:844});
+              const rect=await page.evaluate(()=>({
+                scroll:document.documentElement.scrollWidth,window:innerWidth,
+                library:document.getElementById('studioProjectLibrary').getBoundingClientRect().width
+              }));
+              assert.ok(rect.scroll<=rect.window+10,label+': '+JSON.stringify(rect));
+              console.log('V2 RESPONSIVE PASS',label,width,JSON.stringify(rect));
+            }
+            assert.deepEqual(errors,[],label+' uncaught errors');
+            await browser.close();
+          }
+          (async()=>{await testBrowser('chromium',chromium);await testBrowser('firefox',firefox);})()
+            .catch(err=>{console.error('V2 QA FAILED',err);process.exit(1)});
+          NODE
