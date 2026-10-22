@@ -213,7 +213,10 @@ jobs:
               await page.locator('#studioQuality').selectOption('standard');
               await page.locator('#studioAspect').selectOption('square');
               await page.evaluate(()=>{appSettings.soundEffects=false;});
-              await page.evaluate(()=>exportChatVideoMP4());
+              // Real click grants browser audio user activation, unlike evaluate().
+              await page.locator('#btnExportMp4').click();
+              await page.waitForFunction(()=>!document.getElementById('exportResultView').classList.contains('hidden') ||
+                document.getElementById('exportModalTitle').textContent.includes('ناموفق'),null,{timeout:20000});
               const audio=await page.evaluate(async()=>{
                 if(!window.lastChatVideoObjectUrl)return {error:document.getElementById('exportProgressStatus').textContent};
                 const blob=await(await fetch(window.lastChatVideoObjectUrl)).blob();
@@ -221,7 +224,13 @@ jobs:
                 // Container codec IDs document whether an encoded sound track exists.
                 const ascii=Array.from(bytes).map(byte=>String.fromCharCode(byte)).join('');
                 return {size:blob.size,format:await identifyVideoContainer(blob),
-                  hasAudio:ascii.includes('mp4a')||ascii.includes('A_OPUS')};
+                  hasAudio:ascii.includes('mp4a')||ascii.includes('A_OPUS'),
+                  soun:ascii.includes('soun'),mp4a:ascii.includes('mp4a'),
+                  aac:ascii.includes('AAC'),opus:ascii.includes('Opus'),
+                  mediaRecorderType:blob.type,webAudio:window.AudioContext&&
+                    (audioCtx ? audioCtx.state : 'not started'),codecs:{
+                    AudioEncoder:typeof AudioEncoder,VideoEncoder:typeof VideoEncoder}
+                };
               });
               assert.ok(audio.size>4000,JSON.stringify(audio));
               assert.ok(audio.hasAudio,'Music track not found in recorded video: '+JSON.stringify(audio));
