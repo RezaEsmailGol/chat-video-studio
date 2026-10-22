@@ -3197,6 +3197,7 @@
     let modifiedBeforeInitialRead = false;
     let pendingFirstSave = false;
     let saveQueue = Promise.resolve();
+    let saveRevision = 0;
 
     function el(id) { return document.getElementById(id); }
     function status(message, error = false) {
@@ -3405,10 +3406,14 @@
         }
         try {
             projectName = el('projectName').value.trim() || 'پروژه جدید';
-            const current = snapshot();
-            // Order writes so deleting several messages quickly cannot resurrect
-            // an earlier snapshot when IndexedDB operations finish out of order.
-            saveQueue = saveQueue.catch(() => {}).then(() => storeProject(current));
+            // Skip queued stale writes: only the latest revision can be persisted.
+            // Keep operations serialized; the final write always reflects the
+            // current message array, even after rapid individual deletions.
+            const revision = ++saveRevision;
+            saveQueue = saveQueue.catch(() => {}).then(async () => {
+                if (revision !== saveRevision) return;
+                await storeProject(snapshot());
+            });
             await saveQueue;
             status('ذخیره محلی انجام شد');
         } catch (err) {
@@ -3499,7 +3504,7 @@
                 saveNow();
             }
         });
-        readProject().then(async saved => {
+        const initialHydration = readProject().then(async saved => {
             if (saved && !modifiedBeforeInitialRead) {
                 const wasLegacyEmpty = saved.messages?.length === 0 &&
                     typeof saved.demoDismissed !== 'boolean';
@@ -3519,6 +3524,8 @@
                 void saveNow();
             }
         });
+        // Internal startup gate also lets browser QA verify the fully restored state.
+        window.chatStudioReady = initialHydration.then(() => saveQueue);
     }
     if (document.readyState === 'complete') initialize();
     else window.addEventListener('load', initialize, { once: true });
