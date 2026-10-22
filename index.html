@@ -3677,7 +3677,7 @@
         return new Promise((resolve, reject) => {
             const tx = db.transaction(DB_STORE, 'readwrite');
             tx.objectStore(DB_STORE).put(data, AUTO_KEY);
-            tx.objectStore(DB_STORE).put(data, 'project:'+activeProjectId);
+            tx.objectStore(DB_STORE).put(data, 'project:'+(data.projectId||activeProjectId));
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
             tx.onabort = () => reject(tx.error || new Error('Write cancelled'));
@@ -3943,9 +3943,10 @@
             // Keep operations serialized; the final write always reflects the
             // current message array, even after rapid individual deletions.
             const revision = ++saveRevision;
+            const capturedProject=snapshot();
             saveQueue = saveQueue.catch(() => {}).then(async () => {
                 if (revision !== saveRevision) return;
-                await storeProject(snapshot());
+                await storeProject(capturedProject);
             });
             await saveQueue;
             status('ذخیره محلی انجام شد');
