@@ -3602,6 +3602,8 @@
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveNow, 800);
     }
+    // Allow async media decoders to persist after the file input change has fired.
+    window.studioScheduleSave = scheduleSave;
     // Message-edit actions use this rather than relying solely on a button click.
     window.persistChatListChange = ({ cleared = false, resetDemo = false } = {}) => {
         if (cleared) demoDismissed = true;
