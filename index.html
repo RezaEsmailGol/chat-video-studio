@@ -953,6 +953,7 @@
             eitaaStatus: 'آخرین بازدید خیلی وقت پیش', eitaaShowEmptyState: true,
             whatsappStatus: 'آخرین بازدید اخیراً', whatsappDate: 'دیروز', whatsappShowEncryption: true,
             rubikaPlaceholder: 'پیام بنویسید...',
+            exportAspect:'portrait',exportQuality:'standard',exportWatermark:'',exportGreenScreen:false,
             fontFamily: "'Vazirmatn', Tahoma, sans-serif",
             fontSize: 22,
             timeGap: 26,
@@ -969,6 +970,101 @@
         const canvas = document.getElementById('chatCanvas');
         const ctx = canvas.getContext('2d');
         let patternCanvas = null;
+
+        // Delivery options. Layout is drawn at 750×1334 then composed for export.
+        let studioMusicBuffer=null, studioOutput=null, studioOutputCtx=null;
+        function studioOutputSize(){
+            const high=appSettings.exportQuality==='high';
+            if(appSettings.exportAspect==='square')return high?[1080,1080]:[720,720];
+            if(appSettings.exportAspect==='landscape')return high?[1920,1080]:[1280,720];
+            return high?[1080,1920]:[750,1334];
+        }
+        function studioOutputCanvas(){
+            const [w,h]=studioOutputSize();
+            if(!studioOutput){
+                studioOutput=document.createElement('canvas');
+                studioOutputCtx=studioOutput.getContext('2d',{alpha:false});
+            }
+            if(studioOutput.width!==w)studioOutput.width=w;
+            if(studioOutput.height!==h)studioOutput.height=h;
+            return studioOutput;
+        }
+        function composeStudioFrame(){
+            const out=studioOutputCanvas(), c=studioOutputCtx;
+            const W=out.width,H=out.height;
+            c.save();
+            c.fillStyle=appSettings.exportGreenScreen?'#00ff00':'#111827';
+            c.fillRect(0,0,W,H);
+            if(appSettings.exportAspect!=='portrait'&&!appSettings.exportGreenScreen){
+                c.save();c.filter='blur(40px) brightness(.35)';
+                const cover=Math.max(W/canvas.width,H/canvas.height)*1.12;
+                c.drawImage(canvas,(W-canvas.width*cover)/2,(H-canvas.height*cover)/2,
+                    canvas.width*cover,canvas.height*cover);c.restore();
+            }
+            const scale=Math.min(W/canvas.width,H/canvas.height);
+            const w=canvas.width*scale,h=canvas.height*scale;
+            c.drawImage(canvas,(W-w)/2,(H-h)/2,w,h);
+            const label=String(appSettings.exportWatermark||'').trim().slice(0,70);
+            if(label){
+                const font=Math.max(17,Math.round(Math.min(W,H)*.024));
+                c.font='700 '+font+'px Vazirmatn, Tahoma, sans-serif';
+                c.textAlign='right';c.direction='rtl';c.textBaseline='bottom';
+                const tw=c.measureText(label).width;
+                const px=W-20,py=H-20,bw=Math.min(tw+30,W-24);
+                c.fillStyle='rgba(0,0,0,.72)';
+                c.beginPath();c.roundRect(Math.max(10,px-bw),py-font-14,bw,font+27,12);c.fill();
+                c.fillStyle='#fff';c.fillText(label,px-10,py-5,W-56);
+            }
+            c.restore();return out;
+        }
+        window.studioExportState=()=>({
+            size:studioOutputSize(),aspect:appSettings.exportAspect,quality:appSettings.exportQuality,
+            green:appSettings.exportGreenScreen,watermark:appSettings.exportWatermark,music:!!studioMusicBuffer
+        });
+        window.updateStudioExportOptions=function(){
+            const aspect=document.getElementById('studioAspect');
+            const quality=document.getElementById('studioQuality');
+            const watermark=document.getElementById('studioWatermark');
+            const green=document.getElementById('studioGreenScreen');
+            if(aspect)appSettings.exportAspect=aspect.value;
+            if(quality)appSettings.exportQuality=quality.value;
+            if(watermark)appSettings.exportWatermark=watermark.value.slice(0,70);
+            if(green)appSettings.exportGreenScreen=green.checked;
+            const hint=document.getElementById('studioOutputSummary');
+            if(hint){
+                const [w,h]=studioOutputSize();
+                hint.textContent=w+'×'+h+' — '+(appSettings.exportQuality==='high'?
+                    'بزرگ‌سازی از بوم اصلی؛ نه رندر بومی 1080p':'استاندارد')+
+                    (appSettings.exportGreenScreen?' — زمینه کروماکی':'');
+            }
+            window.studioScheduleSave?.();
+        };
+        window.loadStudioMusic=async function(input){
+            const file=input.files?.[0],node=document.getElementById('studioMusicStatus');
+            if(!file)return;
+            try{
+                if(file.size>15*1024*1024)throw Error('حجم فایل صوتی باید کمتر از ۱۵ مگابایت باشد');
+                if(!file.type.startsWith('audio/'))throw Error('فرمت فایل باید صوتی باشد');
+                const Ctx=window.AudioContext||window.webkitAudioContext;
+                if(!Ctx)throw Error('پردازش صوت در مرورگر موجود نیست');
+                const ac=new Ctx();
+                try{studioMusicBuffer=await ac.decodeAudioData(await file.arrayBuffer());}
+                finally{await ac.close();}
+                node.textContent='آماده: '+file.name+' (بعد از رفرش دوباره انتخاب شود)';
+            }catch(e){studioMusicBuffer=null;node.textContent=e.message;}
+            input.value='';
+        };
+        window.clearStudioMusic=()=>{
+            studioMusicBuffer=null;
+            document.getElementById('studioMusicStatus').textContent='موسیقی انتخاب نشده است';
+        };
+        function startStudioMusic(){
+            if(!studioMusicBuffer||!audioCtx||!audioDest)return null;
+            const source=audioCtx.createBufferSource(), gain=audioCtx.createGain();
+            source.buffer=studioMusicBuffer;source.loop=true;gain.gain.value=.2;
+            source.connect(gain);gain.connect(audioDest);source.start();return source;
+        }
+
 
         const APPLE_EMOJI_CDN = 'https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.1.2/img/apple/64/';
         const emojiImageCache = new Map();
@@ -1999,6 +2095,7 @@
 
             ctx.clearRect(0, 0, W, H);
             drawTelegramBackground(ctx, W, H);
+            if(appSettings.exportGreenScreen && animState.isExporting){ctx.fillStyle='#00ff00';ctx.fillRect(0,0,W,H);}
 
             const hasHeaderAndBar = appSettings.headerMode === 'with_header';
             const headerH = hasHeaderAndBar ? 92 : 0;
