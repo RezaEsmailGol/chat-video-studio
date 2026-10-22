@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+<title id="title">Chat Video Studio — استودیو ساخت ویدیوی چت</title>
+<desc id="desc">Promotional cover showing a fictional chat timeline with five messenger-themed templates, video export and local projects.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#071121"/><stop offset=".53" stop-color="#112747"/><stop offset="1" stop-color="#062b33"/></linearGradient>
+  <linearGradient id="a" x1="0" x2="1"><stop stop-color="#24E8C1"/><stop offset=".53" stop-color="#28C7F7"/><stop offset="1" stop-color="#7D79FF"/></linearGradient>
+  <linearGradient id="panel" x1="0" x2="1"><stop stop-color="#12243E"/><stop offset="1" stop-color="#162F47"/></linearGradient>
+  <linearGradient id="chat" x1="0" x2="1"><stop stop-color="#0D9078"/><stop offset="1" stop-color="#0F615D"/></linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="24"/></filter>
+  <filter id="shadow" x="-25%" y="-25%" width="160%" height="180%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity=".44"/></filter>
+  <pattern id="dots" width="32" height="32" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#8FC7DB" opacity=".16"/></pattern>
+  <clipPath id="screen"><rect x="613" y="100" width="493" height="427" rx="23"/></clipPath>
+</defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<rect width="1200" height="630" fill="url(#dots)"/>
+<circle cx="1080" cy="54" r="180" fill="#14FFC7" opacity=".13" filter="url(#glow)"/>
+<circle cx="152" cy="540" r="180" fill="#3778FF" opacity=".17" filter="url(#glow)"/>
+<path d="M0 558Q265 500 516 598T1200 526" fill="none" stroke="#2BC7EA" opacity=".16" stroke-width="2"/>
+<rect x="66" y="65" width="72" height="72" rx="18" fill="#123451" stroke="#3DE0D3" stroke-opacity=".7"/>
+<path d="M87 90h30a9 9 0 0 1 9 9v13a9 9 0 0 1-9 9h-11l-11 8v-8h-8a9 9 0 0 1-9-9V99a9 9 0 0 1 9-9Z" transform="translate(5 -4)" fill="none" stroke="#4CF9C4" stroke-width="4"/>
+<path d="m102 98 0 18m-7-11 7-7 7 7" fill="none" stroke="#66D6FF" stroke-width="3" stroke-linecap="round"/>
+<text x="158" y="105" fill="#EAF9FF" font-family="Inter,Arial,sans-serif" font-size="48" font-weight="800">Chat <tspan fill="#42DDE3">Video</tspan> Studio</text>
+<text x="72" y="191" font-size="29" font-weight="700" fill="#F0FBFF" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">استودیو ساخت ویدیوی چت</text>
+<text x="72" y="233" font-size="21" fill="#BBD3E8" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">سناریوی فارسی بساز؛ ویدیو تحویل بگیر</text>
+<rect x="72" y="270" rx="16" width="468" height="54" fill="#14364C" stroke="#26C7C2" stroke-opacity=".35"/>
+<text x="306" y="306" text-anchor="middle" font-size="21" font-family="Vazirmatn,Tahoma,Arial,sans-serif" fill="#CFFAF5">۵ قالب چت  •  پیش‌نمایش  •  خروجی ویدیو</text>
+<g font-family="Vazirmatn,Tahoma,Arial,sans-serif" font-size="19" fill="#CDE5F2">
+<circle cx="91" cy="375" r="6" fill="#3FE9B2"/><text x="113" y="382">تلگرام، بله، ایتا، واتساپ، روبیکا</text>
+<circle cx="91" cy="423" r="6" fill="#3FE9B2"/><text x="113" y="430">واترمارک، موسیقی، خروجی ۹:۱۶ و ۱:۱</text>
+<circle cx="91" cy="471" r="6" fill="#3FE9B2"/><text x="113" y="478">ذخیره محلی پروژه، بدون نصب و ثبت‌نام</text>
+</g>
+<rect x="70" y="522" width="309" height="58" rx="29" fill="url(#a)"/>
+<text x="224" y="559" font-family="Vazirmatn,Tahoma,Arial,sans-serif" text-anchor="middle" font-size="23" font-weight="800" fill="#062337">تست آنلاین رایگان ←</text>
+<text x="73" y="610" font-family="Arial,sans-serif" font-size="17" fill="#B9D5E2">github.com/RezaEsmailGol/chat-video-studio</text>
+<g filter="url(#shadow)">
+<rect x="600" y="87" width="519" height="453" rx="28" fill="#091522" stroke="#68E9E9" stroke-opacity=".48" stroke-width="2"/>
+<rect x="613" y="100" width="493" height="427" rx="23" fill="url(#panel)"/>
+</g>
+<g clip-path="url(#screen)">
+<rect x="613" y="100" width="493" height="60" fill="#0A1526"/>
+<circle cx="646" cy="131" r="19" fill="#8B5CF6"/>
+<text x="646" y="137" text-anchor="middle" font-family="Arial" font-weight="700" font-size="14" fill="#fff">R</text>
+<text x="683" y="128" font-size="18" font-family="Vazirmatn,Tahoma,Arial,sans-serif" font-weight="700" fill="#fff">رضا اسماعیل گل</text>
+<text x="683" y="148" font-size="12" font-family="Arial" fill="#98BED0">demo conversation</text>
+<circle cx="1063" cy="130" r="9" fill="none" stroke="#B1DFE6" stroke-width="2"/>
+<path d="m1070 137 8 8" stroke="#B1DFE6" stroke-width="2"/>
+<rect x="640" y="187" width="314" height="66" rx="17" fill="#263C50"/>
+<text x="658" y="213" font-size="18" fill="#F7FBFF" font-family="Vazirmatn,Tahoma,Arial,sans-serif">سلام! می‌خوام یک چت ویدیویی بسازم 👋</text>
+<text x="668" y="240" font-family="Arial" fill="#99B7C8" font-size="12">10:14</text>
+<rect x="738" y="269" width="338" height="73" rx="17" fill="url(#chat)"/>
+<text x="757" y="299" font-size="18" fill="#FFF" font-family="Vazirmatn,Tahoma,Arial,sans-serif">قالب رو انتخاب کن و پیام‌هات رو بنویس ✨</text>
+<text x="757" y="328" font-family="Arial" font-size="12" fill="#A9F4E5">10:15 ✓✓</text>
+<rect x="640" y="357" width="302" height="61" rx="17" fill="#263C50"/>
+<rect x="653" y="368" width="45" height="39" rx="10" fill="#365A72"/>
+<path d="m669 377 15 12-15 12z" fill="#8BEBFE"/>
+<text x="710" y="387" font-family="Arial" font-weight="700" font-size="18" fill="#F7FAFF">video.mp4</text>
+<text x="710" y="405" font-family="Arial" font-size="13" fill="#95C5CD">Ready to export</text>
+<rect x="729" y="443" width="348" height="48" rx="16" fill="#0A1725" stroke="#34586F"/>
+<circle cx="757" cy="467" r="14" fill="#19C8B2"/>
+<path d="m752 459 12 8-12 8z" fill="#092B3C"/>
+<path d="M785 467h24m12 0h12m12 0h28m12 0h12m12 0h43m12 0h20" stroke="#5ADFD6" stroke-linecap="round" stroke-width="5"/>
+</g>
+<g font-family="Vazirmatn,Tahoma,Arial,sans-serif" font-size="13" text-anchor="middle" fill="#D6ECF8">
+<rect x="619" y="543" width="93" height="29" rx="14" fill="#18445B"/><text x="665" y="563">تلگرام</text>
+<rect x="718" y="543" width="77" height="29" rx="14" fill="#18445B"/><text x="756" y="563">بله</text>
+<rect x="801" y="543" width="77" height="29" rx="14" fill="#18445B"/><text x="839" y="563">ایتا</text>
+<rect x="884" y="543" width="91" height="29" rx="14" fill="#18445B"/><text x="929" y="563">واتساپ</text>
+<rect x="981" y="543" width="99" height="29" rx="14" fill="#18445B"/><text x="1030" y="563">روبیکا</text>
+</g>
+<text x="1050" y="610" text-anchor="end" font-family="Arial" fill="#83AAB8" font-size="15">BETA · Persian-first · Open source</text>
+</svg>
