@@ -3970,6 +3970,28 @@
             '<span id="projectStatus" role="status" aria-live="polite" class="text-xs text-slate-400 w-full">ذخیره خودکار در همین مرورگر فعال است • Ctrl+S برای ذخیره دستی</span>' +
             '</div>';
         document.querySelector('header').insertAdjacentElement('afterend', controls);
+        const library=document.createElement('div');
+        library.id='studioProjectLibrary';
+        library.className='mt-3 flex flex-wrap items-center gap-2 text-sm';
+        library.innerHTML =
+            '<label for="studioProjectsSelect" class="text-slate-300 font-medium">کتابخانه پروژه‌ها:</label>'+
+            '<select id="studioProjectsSelect" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-2 text-white min-w-32 max-w-full" aria-label="پروژه ذخیره‌شده"></select>'+
+            '<button type="button" id="studioOpenProject" class="bg-teal-800 hover:bg-teal-700 text-white rounded-lg px-3 py-2">بازکردن</button>'+
+            '<button type="button" id="studioNewProject" class="bg-sky-800 hover:bg-sky-700 text-white rounded-lg px-3 py-2">پروژه جدید</button>'+
+            '<button type="button" id="studioDuplicateProject" class="bg-slate-700 hover:bg-slate-600 text-white rounded-lg px-3 py-2">کپی پروژه</button>'+
+            '<button type="button" id="studioDeleteProject" class="bg-rose-950 text-rose-200 rounded-lg px-3 py-2">حذف پروژه</button>'+
+            '<span id="studioProjectCount" class="text-xs text-slate-400" role="status"></span>';
+        controls.firstElementChild.append(library);
+        const manage=async task=>{
+            try{await task();}
+            catch(error){console.error('Project library failed',error);
+                status('خطای کتابخانه پروژه: '+(error.message||error),true);}
+        };
+        el('studioOpenProject').addEventListener('click',()=>manage(()=>
+            switchStudioProject(el('studioProjectsSelect').value)));
+        el('studioNewProject').addEventListener('click',()=>manage(newStudioProject));
+        el('studioDuplicateProject').addEventListener('click',()=>manage(duplicateStudioProject));
+        el('studioDeleteProject').addEventListener('click',()=>manage(deleteStudioProject));
         el('saveProject').addEventListener('click', saveNow);
         el('downloadProject').addEventListener('click', downloadJSON);
         el('importProject').addEventListener('change', importJSON);
