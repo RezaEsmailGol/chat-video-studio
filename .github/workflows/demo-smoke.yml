@@ -1,0 +1,87 @@
+name: Demo smoke test (temporary)
+on:
+  push:
+    branches: [feat/initial-studio-and-projects]
+permissions:
+  contents: read
+jobs:
+  demo-first-visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify first visit, restored project, and GitHub footer
+        run: |
+          python3 -m http.server 8125 >/tmp/studio-demo.log 2>&1 &
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const context=await browser.newContext({viewport:{width:1280,height:900}});
+            const page=await context.newPage();
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            await page.goto('http://127.0.0.1:8125/',{waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>document.getElementById('platformRubika')&&document.getElementById('projectName'));
+            const first=await page.evaluate(()=>({
+              count:messages.length,
+              firstText:messages[0]?.text,
+              lastText:messages.at(-1)?.text,
+              contact:appSettings.contactName,
+              platform:appSettings.platform,
+              project:document.getElementById('projectName').value,
+              preview:document.getElementById('chatCanvas').toDataURL('image/png').startsWith('data:image/png;base64,'),
+              footerLink:document.querySelector('footer a')?.href,
+              footerName:document.querySelector('footer')?.textContent,
+              resetText:document.querySelector('button[onclick="resetToDefaultScreenshotChat()"]')?.textContent
+            }));
+            console.log('FIRST VISIT',JSON.stringify(first));
+            assert.equal(first.count,10);
+            assert.match(first.firstText,/Chat Video Studio/);
+            assert.match(first.lastText,/خروجی ویدیو/);
+            assert.equal(first.contact,'رضا اسماعیل گل');
+            assert.equal(first.platform,'telegram');
+            assert.match(first.project,/دموی معرفی/);
+            assert.equal(first.preview,true);
+            assert.equal(first.footerLink,'https://github.com/RezaEsmailGol/chat-video-studio');
+            assert.match(first.footerName,/رضا اسماعیل گل/);
+            assert.match(first.resetText,/سناریوی معرفی/);
+
+            await page.locator('#platformBale').click();
+            await page.evaluate(()=>{
+              messages=[{id:'keep',side:'left',text:'این پیام سفارشی من است',time:'10:10',delaySec:.6,replyName:'',replyText:''}];
+              renderMessagesListUI();showStaticFullChat();
+            });
+            await page.locator('#saveProject').click();
+            await page.waitForFunction(()=>document.getElementById('projectStatus').textContent.includes('ذخیره محلی انجام شد'));
+            await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>document.getElementById('projectStatus')?.textContent.includes('بازیابی شد'),null,{timeout:25000});
+            const restored=await page.evaluate(()=>({
+              count:messages.length,
+              firstText:messages[0]?.text,
+              platform:appSettings.platform,
+              link:document.querySelector('footer a')?.href
+            }));
+            console.log('SAVED PROJECT RESTORED',JSON.stringify(restored));
+            assert.equal(restored.count,1);
+            assert.equal(restored.platform,'bale');
+            assert.equal(restored.firstText,'این پیام سفارشی من است');
+            assert.equal(restored.link,'https://github.com/RezaEsmailGol/chat-video-studio');
+
+            page.once('dialog',dialog=>dialog.accept());
+            await page.locator('button[onclick="resetToDefaultScreenshotChat()"]').click();
+            const reset=await page.evaluate(()=>({count:messages.length,firstText:messages[0].text}));
+            console.log('RESET DEMO',JSON.stringify(reset));
+            assert.equal(reset.count,10);
+            assert.match(reset.firstText,/Chat Video Studio/);
+            assert.deepEqual(errors,[]);
+            await browser.close();
+          })().catch(e=>{console.error('DEMO QA FAILED',e);process.exit(1)});
+          NODE
