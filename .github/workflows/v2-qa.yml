@@ -98,10 +98,14 @@ jobs:
             const items=await page.evaluate(()=>Array.from(document.getElementById('studioProjectsSelect').options).map(o=>o.value));
             assert.ok(items.includes('main'));
             await page.locator('#studioProjectsSelect').selectOption('main');
+            console.log('DEBUG MAIN SELECTED',await page.locator('#studioProjectsSelect').inputValue());
             await page.locator('#studioOpenProject').click();
+            await page.waitForFunction(()=>messages.length===10,null,{timeout:10000});
             assert.equal(await page.evaluate(()=>messages.length),10);
+            console.log('DEBUG MAIN RESTORED',await page.evaluate(()=>({name:document.getElementById('projectName').value,n:messages.length})));
             await page.locator('#studioProjectsSelect').selectOption(newId);
             await page.locator('#studioOpenProject').click();
+            await page.waitForFunction(()=>messages.length===8,null,{timeout:10000});
             assert.equal(await page.evaluate(()=>messages.length),8);
             await page.reload({waitUntil:'domcontentloaded'});
             await page.evaluate(()=>window.chatStudioReady);
