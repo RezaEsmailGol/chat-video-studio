@@ -56,29 +56,143 @@
         .msg-card-enter {
             animation: fadeSlideIn 0.2s ease-out forwards;
         }
+
+        /* Chat Video Studio UX refresh, October 2026: no new runtime dependencies. */
+        :root {
+            color-scheme: dark;
+            --studio-border: rgba(148, 163, 184, .17);
+            --studio-accent: #34d399;
+            --studio-focus: #5eead4;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            background:
+                radial-gradient(circle at 10% -20%, rgba(13, 148, 136, .14), transparent 45%),
+                radial-gradient(circle at 95% 0%, rgba(30, 64, 175, .12), transparent 35%),
+                #0c1423;
+            min-width: 320px;
+        }
+        button, select, textarea, input, summary { -webkit-tap-highlight-color: transparent; }
+        button:not(:disabled), summary, label[for] { cursor: pointer; }
+        button:disabled { cursor: not-allowed; opacity: .5; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+        summary:focus-visible, a:focus-visible {
+            outline: 2px solid var(--studio-focus);
+            outline-offset: 3px;
+        }
+        .studio-header {
+            background: rgba(15, 23, 42, .94);
+            border-bottom: 1px solid var(--studio-border);
+        }
+        .studio-header-actions button { min-height: 43px; }
+        .studio-card {
+            background: rgba(18, 29, 48, .95);
+            border: 1px solid var(--studio-border);
+            box-shadow: 0 8px 30px rgba(0,0,0,.14);
+        }
+        .studio-subtle-label { font-size: .8rem; line-height: 1.65; color: #a8b8cd; }
+        .studio-notice {
+            background: linear-gradient(100deg,rgba(20,184,166,.10),rgba(59,130,246,.05));
+            border: 1px solid rgba(45,212,191,.20);
+            border-radius: 1rem;
+        }
+        .studio-guide-steps {
+            display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.2rem;
+            font-size: .81rem; color: #cad7e8;
+        }
+        .studio-guide-steps strong {
+            display: inline-grid; place-items: center;
+            width: 24px; height: 24px; margin-left: .35rem;
+            background: rgba(20,184,166,.17); border: 1px solid rgba(45,212,191,.24);
+            border-radius: 50%; color: #99f6e4; font-weight: 700;
+        }
+        .studio-advanced > summary {
+            list-style: none; padding: 1rem; border: 1px solid var(--studio-border);
+            border-radius: 1rem; background: #141f33; color: #e2e8f0;
+            font-size: .9rem; font-weight: 700;
+            display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        }
+        .studio-advanced > summary::-webkit-details-marker { display: none; }
+        .studio-advanced > summary::after {
+            content: '⌄'; font-size: 1.35rem; font-weight: 500;
+            transition: transform .2s ease;
+        }
+        .studio-advanced[open] > summary { border-radius: 1rem 1rem 0 0; }
+        .studio-advanced[open] > summary::after { transform: rotate(180deg); }
+        .studio-advanced .studio-advanced-body {
+            border-top: 0; border-radius: 0 0 1rem 1rem;
+        }
+        .studio-quick-bar {
+            display: flex; flex-wrap: wrap; align-items: end;
+            gap: .8rem; padding: .9rem 0 .2rem;
+        }
+        .studio-quick-bar label { display: block; margin-bottom: .3rem; font-size: .76rem; color: #b6c8dc; }
+        .studio-quick-bar input {
+            min-height: 43px; min-width: 180px;
+            border: 1px solid #475569; border-radius: .7rem;
+            background: #0b1424; padding: .55rem .75rem; color: white;
+            font-size: .9rem;
+        }
+        .studio-quick-bar button { min-height: 43px; }
+        .studio-template-hint {
+            color: #93a9c2; font-size: .73rem; line-height: 1.8;
+            padding-top: .6rem;
+        }
+        .studio-preview-panel { background: rgba(18, 29, 48, .95); }
+        .studio-preview-panel canvas { image-rendering: auto; }
+        .studio-inline-link { color: #99f6e4; text-underline-offset: 3px; }
+        .studio-inline-link:hover { color: #ccfbf1; }
+        .studio-toast {
+            position: fixed; bottom: 1.2rem; left: 50%;
+            transform: translate(-50%,12px); z-index: 90;
+            padding: .75rem 1rem; border: 1px solid rgba(94,234,212,.25);
+            border-radius: .8rem; background: #163c3c; color: #e5fffa;
+            box-shadow: 0 15px 38px rgba(0,0,0,.3);
+            opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+            max-width: calc(100vw - 2rem); text-align: center; font-size: .8rem;
+        }
+        .studio-toast.is-visible { transform: translate(-50%,0); opacity: 1; }
+        @media (max-width: 767px) {
+            html { scroll-behavior: auto; }
+            .studio-header { position: static !important; }
+            .studio-header-inner { align-items: stretch; }
+            .studio-header-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+            .studio-header-actions button { justify-content: center; font-size: .76rem; }
+            .studio-header-actions .studio-primary-action { grid-column: 1 / -1; }
+            .studio-guide-steps { gap: .35rem .8rem; font-size: .74rem; }
+            .studio-quick-bar input { width: 100%; min-width: 0; }
+            .studio-quick-bar > div { flex: 1 1 180px; }
+            .studio-preview-panel { box-shadow: none; }
+            #messagesListContainer { max-height: 360px; }
+            #chatCanvas { max-height: min(68vh, 600px); }
+            .studio-toast { bottom: .7rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
     <!-- Top Navigation / Action Header -->
-    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3">
-        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+    <header class="studio-header sticky top-0 z-30 backdrop-blur-md px-4 lg:px-8 py-3" role="banner">
+        <div class="studio-header-inner max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
             <!-- Brand Title -->
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-xl">
-                    <i class="fa-brands fa-telegram"></i>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-white text-xl" aria-hidden="true">
+                    <i class="fa-solid fa-comments"></i>
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                         استودیو ساخت ویدیو چت
-                        <span class="text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">خروجی MP4</span>
+                        <span class="text-[11px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">۵ قالب پیام‌رسان</span>
                     </h1>
-                    <p class="text-xs text-slate-400">طراحی مکالمه دوطرفه با ایموجی، عکس، ویدیو و دانلود مستقیم فیلم</p>
+                    <p class="text-xs text-slate-400">ساخت مکالمه نمایشی، پیش‌نمایش زنده و خروجی عکس و ویدیو</p>
                 </div>
             </div>
 
             <!-- Main Playback & Export Controls -->
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="studio-header-actions flex flex-wrap items-center gap-2">
                 <button id="btnPlayPreview" onclick="togglePreviewPlayPause()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-semibold transition flex items-center gap-2 border border-slate-700">
                     <i class="fa-solid fa-play text-emerald-400"></i>
                     <span>پخش انیمیشن چت</span>
@@ -94,19 +208,35 @@
                     <span class="hidden sm:inline">عکس PNG</span>
                 </button>
 
-                <button id="btnExportMp4" onclick="exportChatVideoMP4()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-emerald-600/25 flex items-center gap-2">
+                <button id="btnExportMp4" onclick="exportChatVideoMP4()" class="studio-primary-action px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-emerald-600/25 flex items-center gap-2">
                     <i class="fa-solid fa-film"></i>
-                    <span>ساخت و دانلود ویدیو (MP4/WebM)</span>
+                    <span>خروجی ویدیو (MP4 / WebM)</span>
                 </button>
             </div>
         </div>
     </header>
 
+    <!-- Short how-to guide with keyboard and privacy clarity -->
+    <section class="max-w-7xl w-full mx-auto px-4 lg:px-8 pt-4" aria-label="راهنمای سریع">
+      <div class="studio-notice px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div class="studio-guide-steps">
+          <span><strong>۱</strong> انتخاب قالب</span>
+          <span><strong>۲</strong> تعیین نام مخاطب</span>
+          <span><strong>۳</strong> افزودن پیام</span>
+          <span><strong>۴</strong> پیش‌نمایش و خروجی</span>
+        </div>
+        <div class="text-xs text-slate-400">
+          داده‌ها در همین مرورگر ذخیره می‌شوند؛
+          <a class="studio-inline-link" href="https://github.com/RezaEsmailGol/chat-video-studio/issues" target="_blank" rel="noopener noreferrer">گزارش مشکل</a>
+        </div>
+      </div>
+    </section>
+
     <!-- Main Workspace Grid -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <main id="studioMain" class="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-5 grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
         <!-- RIGHT COLUMN (in RTL): Editor, Composer & Settings (7 cols) -->
-        <section class="lg:col-span-7 flex flex-col gap-5 order-2 lg:order-1">
+        <section id="studioEditor" class="lg:col-span-7 flex flex-col gap-4 order-2 lg:order-1" aria-label="ویرایش گفت‌وگو">
 
             <!-- Add New Message Composer Box -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
@@ -133,7 +263,7 @@
                 <!-- Text & Time Input -->
                 <div class="flex flex-col sm:flex-row gap-2.5 mb-2.5">
                     <div class="flex-1 relative">
-                        <textarea id="newMsgText" rows="2" placeholder="متن پیام یا کپشن عکس/ویدیو را بنویسید... (با Enter اضافه کنید)" class="w-full bg-slate-950 border border-slate-700/80 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none transition"></textarea>
+                        <textarea id="newMsgText" rows="3" aria-label="متن پیام جدید" placeholder="متن پیام را اینجا بنویسید… (Enter برای افزودن، Shift+Enter برای خط جدید)" class="w-full bg-slate-950 border border-slate-700/80 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none resize-none transition"></textarea>
                     </div>
                     <div class="sm:w-32 flex flex-row sm:flex-col gap-2">
                         <div class="flex-1">
@@ -181,7 +311,7 @@
                         </button>
                     </div>
 
-                    <span class="text-[11px] text-slate-400">ایموجی‌ها با گرافیک اصلی تلگرام (Apple) رندر می‌شوند</span>
+                    <span class="text-[11px] text-slate-400">رسانه و ایموجی در پیش‌نمایش قابل بررسی است</span>
                 </div>
 
                 <!-- Telegram Apple Emoji Picker Drawer -->
@@ -203,7 +333,7 @@
                         <img id="composerMediaThumb" src="" alt="Preview" class="w-14 h-14 rounded-lg object-cover border border-slate-700 bg-slate-900">
                         <div>
                             <div class="flex items-center gap-2">
-                                <span id="composerMediaTypeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">عکس تلگرام</span>
+                                <span id="composerMediaTypeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">تصویر</span>
                                 <span class="text-xs text-slate-300">آماده ارسال در پیام</span>
                             </div>
                             <div id="composerVideoDurationRow" class="hidden flex items-center gap-2 mt-1.5">
@@ -382,7 +512,7 @@
                         </label>
                         <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                             <input type="checkbox" id="settingSoundEffects" checked onchange="updateSettings()" class="rounded border-slate-700 text-emerald-500 bg-slate-950">
-                            <span>افکت صوتی پیام در ویدیو MP4</span>
+                            <span>افکت صوتی پیام در ویدیو (در صورت پشتیبانی)</span>
                         </label>
                     </div>
                 </div>
@@ -419,8 +549,8 @@
         </section>
 
         <!-- LEFT COLUMN (in RTL): Sticky Live Canvas Preview (5 cols) -->
-        <section class="lg:col-span-5 lg:sticky lg:top-20 flex flex-col items-center order-1 lg:order-2">
-            <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col items-center">
+        <section id="studioPreview" class="lg:col-span-5 lg:sticky lg:top-20 flex flex-col items-center order-1 lg:order-2" aria-label="پیش‌نمایش چت">
+            <div class="studio-preview-panel w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col items-center">
                 <!-- Preview Top Bar -->
                 <div class="w-full flex items-center justify-between mb-3 px-1">
                     <div class="flex items-center gap-2">
