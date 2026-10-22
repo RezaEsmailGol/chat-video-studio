@@ -2052,38 +2052,41 @@
             const percentText = document.getElementById('exportPercentText');
             const modalTitle = document.getElementById('exportModalTitle');
             const recBadge = document.getElementById('recordingBadge');
+            const progressStatus = document.getElementById('exportProgressStatus');
 
             modal.classList.remove('hidden');
             progressView.classList.remove('hidden');
             resultView.classList.add('hidden');
             recBadge.classList.remove('hidden');
             modalTitle.textContent = 'در حال ساخت ویدیو...';
-            document.getElementById('exportProgressStatus').textContent = 'آماده‌سازی فریم‌ها و کدک ویدیو...';
+            progressStatus.textContent = 'آماده‌سازی فریم‌ها و کدک ویدیو...';
             progressFill.style.width = '0%';
             percentText.textContent = '0%';
 
             try {
-                const canUseWebCodecsMp4 = (typeof window.VideoEncoder !== 'undefined' && typeof window.Mp4Muxer !== 'undefined');
-
-                if (canUseWebCodecsMp4) {
-                    await renderWithWebCodecsMp4(progressFill, percentText);
+                const hasWebCodecsMp4 = (
+                    typeof window.VideoEncoder !== 'undefined' &&
+                    typeof window.Mp4Muxer !== 'undefined'
+                );
+                if (hasWebCodecsMp4) {
+                    try {
+                        await renderWithWebCodecsMp4(progressFill, percentText);
+                    } catch (webCodecError) {
+                        console.info('Using compatible MediaRecorder fallback:', webCodecError.message || webCodecError);
+                        progressStatus.textContent = 'ضبط ویدیوی سازگار با مرورگر...';
+                        await renderWithMediaRecorder(progressFill, percentText);
+                    }
                 } else {
                     await renderWithMediaRecorder(progressFill, percentText);
                 }
             } catch (err) {
-                console.info('WebCodecs unavailable; using MediaRecorder:', err.message || err);
-                document.getElementById('exportProgressStatus').textContent =
-                    'ضبط ویدیوی سازگار با مرورگر...';
-                try {
-                    await renderWithMediaRecorder(progressFill, percentText);
-                } catch (fallbackErr) {
-                    console.error('Export error:', fallbackErr);
-                    document.getElementById('exportProgressStatus').textContent =
-                        'خطا در ساخت ویدیو: ' + (fallbackErr.message || 'مرورگر خروجی ویدیو را پشتیبانی نمی‌کند');
-                    document.getElementById('exportProgressFill').style.width = '0%';
-                    document.getElementById('exportPercentText').textContent = 'ناموفق';
-                    document.getElementById('exportModalTitle').textContent = 'خروجی ویدیو ناموفق بود';
-                }
+                console.error('Chat Video Studio export failed:', err);
+                modalTitle.textContent = 'خروجی ویدیو ناموفق بود';
+                progressStatus.textContent =
+                    'ساخت ویدیو انجام نشد: ' +
+                    (err && err.message ? err.message : 'مرورگر از خروجی ویدیو پشتیبانی نمی‌کند');
+                percentText.textContent = 'ناموفق';
+                progressFill.style.width = '0%';
             } finally {
                 animState.isExporting = false;
                 recBadge.classList.add('hidden');
