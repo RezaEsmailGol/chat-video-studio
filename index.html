@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استودیو ساخت ویدیو چت | تلگرام و بله</title>
+    <title>Chat Video Studio | استودیو ساخت ویدیو چت</title>
+    <meta name="description" content="استودیو رایگان ساخت ویدیوی مکالمه نمایشی در قالب تلگرام، بله، ایتا، واتساپ و روبیکا.">
+    <meta name="theme-color" content="#0f172a">
+    <meta property="og:title" content="Chat Video Studio">
+    <meta property="og:description" content="ساخت مکالمه نمایشی و خروجی ویدیو در پنج قالب پیام‌رسان.">
+    <meta property="og:type" content="website">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Vazirmatn & Inter -->
@@ -229,7 +234,7 @@
                     <div id="newReplyFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5 pt-2.5 border-t border-slate-800">
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">نام فرد در کادر ریپلای (هماهنگ با نام بالای چت)</label>
-                            <input id="newReplyName" type="text" placeholder="مثلاً: Peyman Mohammadian" value="Peyman Mohammadian" oninput="syncReplyNameWithHeader(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                            <input id="newReplyName" type="text" placeholder="مثلاً: رضا اسماعیل گل" value="رضا اسماعیل گل" dir="auto" oninput="syncReplyNameWithHeader(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
                         </div>
                         <div>
                             <label class="block text-[11px] text-slate-400 mb-1">متن خلاصه ریپلای شده</label>
@@ -348,7 +353,7 @@
                         <div class="relative shrink-0">
                             <img id="contactAvatarPreview" src="" alt="Avatar" class="hidden w-11 h-11 rounded-full object-cover border border-slate-600">
                             <div id="contactAvatarPlaceholder" class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center text-white font-bold text-sm border border-slate-600">
-                                P
+                                ر
                             </div>
                         </div>
                         <div class="flex-1 min-w-0">
@@ -367,7 +372,7 @@
 
                     <div class="sm:col-span-4 bg-slate-950 p-2 rounded-xl border border-slate-800">
                         <label class="block text-[11px] text-slate-400 mb-1">نام بالای چت (و نام در حال تایپ)</label>
-                        <input type="text" id="settingContactName" dir="ltr" value="Peyman Mohammadian" oninput="updateSettings()" placeholder="مثلاً: angie lee" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
+                        <input type="text" id="settingContactName" dir="auto" value="رضا اسماعیل گل" oninput="updateSettings()" placeholder="مثلاً: رضا اسماعیل گل" aria-label="نام مخاطب بالای چت" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none">
                     </div>
 
                     <div class="sm:col-span-3 flex flex-col gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
@@ -565,7 +570,7 @@
                 text: 'وای چه عالی! حتماً خبرم کن ببینمش 😍',
                 time: '10:18 AM',
                 delaySec: 1.5,
-                replyName: 'Peyman Mohammadian',
+                replyName: 'رضا اسماعیل گل',
                 replyText: 'عالیه، امشب بخش خروجیش تم...'
             },
             {
@@ -640,7 +645,7 @@
             headerMode: 'with_header',
             showTyping: true,
             soundEffects: true,
-            contactName: 'Peyman Mohammadian',
+            contactName: 'رضا اسماعیل گل',
             contactAvatarImg: null,
             customBgImage: null
         };
@@ -1359,7 +1364,7 @@
                 c.font = `700 13.5px ${persianFont}`;
                 c.textAlign = 'right';
                 c.direction = 'rtl';
-                const activeContactName = (appSettings.contactName || 'Peyman Mohammadian').trim();
+                const activeContactName = (appSettings.contactName || 'رضا اسماعیل گل').trim();
                 c.fillText(msg.replyName || activeContactName, replyX + replyW - 10, replyY + 17);
 
                 c.fillStyle = isDark ? '#94a3b8' : '#64748b';
@@ -1511,7 +1516,7 @@
             c.stroke();
 
             const textStartX = 170;
-            const nameStr = (appSettings.contactName || 'Peyman Mohammadian').trim();
+            const nameStr = (appSettings.contactName || 'رضا اسماعیل گل').trim();
             c.textBaseline = 'alphabetic';
             c.textAlign = 'left';
             c.direction = 'ltr';
@@ -2246,7 +2251,7 @@
             if (!targetMsg) return;
             const truncated = targetMsg.text.length > 26 ? targetMsg.text.slice(0, 26) + '...' : targetMsg.text;
             document.getElementById('newReplyText').value = truncated;
-            document.getElementById('newReplyName').value = (appSettings.contactName || 'Peyman Mohammadian').trim();
+            document.getElementById('newReplyName').value = (appSettings.contactName || 'رضا اسماعیل گل').trim();
         }
 
         function syncReplyNameWithHeader(newName) {
@@ -2858,6 +2863,10 @@
             appSettings.contactName = document.getElementById('settingContactName').value;
 
             // Keep reply names synchronized with the header contact name
+            const quickNameInput = document.getElementById('quickContactName');
+            if (quickNameInput && quickNameInput !== document.activeElement) {
+                quickNameInput.value = appSettings.contactName;
+            }
             const newReplyNameInput = document.getElementById('newReplyName');
             if (newReplyNameInput) {
                 newReplyNameInput.value = appSettings.contactName;
@@ -3063,6 +3072,9 @@
             !data.settings || typeof data.settings !== 'object') {
             throw new Error('فرمت پروژه نامعتبر یا پشتیبانی‌نشده است.');
         }
+        // Migrate only the old demonstration contact name. Do not touch custom contact names.
+        const oldDemoName = ['Peyman', 'Mohammadian'].join(' ');
+        const replaceDemo = value => value === oldDemoName ? 'رضا اسماعیل گل' : value;
         const normalized = await Promise.all(data.messages.map(async (m, i) => {
             if (!m || typeof m !== 'object') throw new Error('پیام نامعتبر است.');
             const url = imageData(m.mediaDataUrl);
@@ -3073,7 +3085,7 @@
                 text: String(m.text || '').slice(0, 10000),
                 time: String(m.time || '').slice(0, 30),
                 delaySec: Math.max(0.2, Math.min(20, Number(m.delaySec) || 1.5)),
-                replyName: String(m.replyName || '').slice(0, 200),
+                replyName: String(replaceDemo(m.replyName || '')).slice(0, 200),
                 replyText: String(m.replyText || '').slice(0, 300),
                 mediaType: mediaImg && ['photo', 'video'].includes(m.mediaType) ? m.mediaType : null,
                 mediaDataUrl: mediaImg ? url : null,
@@ -3100,7 +3112,7 @@
             headerMode: s.headerMode === 'clean' ? 'clean' : 'with_header',
             showTyping: Boolean(s.showTyping),
             soundEffects: Boolean(s.soundEffects),
-            contactName: String(s.contactName || '').slice(0, 150)
+            contactName: String(replaceDemo(s.contactName || '')).slice(0, 150)
         };
         const [avatar, wallpaper] = await Promise.all([loadImage(s.avatar), loadImage(s.wallpaper)]);
         settings.contactAvatarImg = avatar;
@@ -3112,6 +3124,7 @@
             stopPreviewAnimation();
             messages = normalized;
             Object.assign(appSettings, settings);
+            // Keep the persistent project up to date after old demo-name migration.
             projectName = String(data.name || 'پروژه جدید').slice(0, 120);
             el('projectName').value = projectName;
             el('settingFont').value = settings.fontFamily;
@@ -3121,7 +3134,7 @@
             el('settingSoundEffects').checked = settings.soundEffects;
             el('settingContactName').value = settings.contactName;
             el('newReplyName').value = settings.contactName;
-            el('contactAvatarPlaceholder').textContent = (settings.contactName.trim()[0] || 'P').toUpperCase();
+            el('contactAvatarPlaceholder').textContent = (settings.contactName.trim()[0] || 'ر').toUpperCase();
             el('contactAvatarPreview').classList.toggle('hidden', !avatar);
             el('contactAvatarPlaceholder').classList.toggle('hidden', !!avatar);
             el('btnRemoveAvatar').classList.toggle('hidden', !avatar);
@@ -3223,7 +3236,7 @@
             if (event.target && event.target.closest('button') && !event.target.closest('#downloadProject')) scheduleSave();
         });
         readProject().then(async saved => {
-            if (saved) { await applyProject(saved); status('آخرین پروژه ذخیره‌شده بازیابی شد'); }
+            if (saved) { await applyProject(saved); await saveNow(); status('آخرین پروژه ذخیره‌شده بازیابی شد'); }
         }).catch(err => { console.warn('No local project loaded', err); status('ذخیره خودکار در این مرورگر در دسترس نیست', true); });
     }
     if (document.readyState === 'complete') initialize();
