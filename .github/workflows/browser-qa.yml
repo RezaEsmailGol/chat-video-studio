@@ -168,6 +168,7 @@ jobs:
           const {firefox,webkit} = require('playwright');
           const assert = require('node:assert/strict');
           (async ()=>{
+            const exportFailures=[];
             for(const [name,engine] of [['firefox',firefox],['webkit',webkit]]) {
               console.log('BROWSER START',name);
               const browser=await engine.launch({headless:true});
@@ -201,12 +202,16 @@ jobs:
                 const blob=await(await fetch(url)).blob();
                 return {type:await identifyVideoContainer(blob),size:blob.size};
               });
-              assert.ok(exportResult.type==='mp4'||exportResult.type==='webm', name+' export failed '+JSON.stringify(exportResult));
-              assert.ok(exportResult.size>2048);
-              console.log('CROSS EXPORT PASS',name,JSON.stringify(exportResult));
+              console.log('CROSS EXPORT RESULT',name,JSON.stringify(exportResult));
+              if(!(['mp4','webm'].includes(exportResult.type)&&exportResult.size>2048)){
+                exportFailures.push(name+': '+JSON.stringify(exportResult));
+              } else {
+                console.log('CROSS EXPORT PASS',name,JSON.stringify(exportResult));
+              }
               assert.equal(errs.length,0, name+' uncaught browser errors: '+errs.join('; '));
               await browser.close();
             }
+            assert.deepEqual(exportFailures,[], 'Cross-browser video export gaps: '+exportFailures.join('; '));
           })().catch(e=>{console.error('CROSS QA FAILED',e);process.exit(1)});
           NODE
       - uses: actions/upload-artifact@v4
