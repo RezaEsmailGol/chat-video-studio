@@ -92,7 +92,7 @@ jobs:
             console.log('PASS deliberate clear persists through reload');
 
             // User can restore deliberately with the existing reset button.
-            await page.locator('button[onclick="resetToDefaultScreenshotChat()"]').click();
+            await page.locator('button[onclick="resetToDefaultScreenshotChat()"]').first().click();
             await waitDB(null,'demo');
             await page.reload({waitUntil:'load'});await awaitReady();
             assert.equal(await page.evaluate(()=>messages.length),10);
