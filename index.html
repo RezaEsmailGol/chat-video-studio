@@ -2154,9 +2154,19 @@
 
             const muxer = new Mp4Muxer.Muxer(muxerOptions);
 
+            let encoderFailure = null;
+            const rememberEncoderFailure = error => {
+                if (!encoderFailure) encoderFailure = error instanceof Error ?
+                    error : new Error(String(error || 'Unknown encoder error'));
+            };
             const videoEncoder = new VideoEncoder({
-                output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-                error: (e) => console.error('VideoEncoder error:', e)
+                output: (chunk, meta) => {
+                    // Firefox may omit EncodedVideoChunk.duration, which older mp4-muxer
+                    // versions do not accept. Record the failure and retry through MediaRecorder.
+                    try { muxer.addVideoChunk(chunk, meta); }
+                    catch (error) { rememberEncoderFailure(error); }
+                },
+                error: rememberEncoderFailure
             });
 
             videoEncoder.configure(videoConfig);
@@ -2164,8 +2174,11 @@
             let audioEncoder = null;
             if (useWebCodecsAudio) {
                 audioEncoder = new AudioEncoder({
-                    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-                    error: (e) => console.error('AudioEncoder error:', e)
+                    output: (chunk, meta) => {
+                        try { muxer.addAudioChunk(chunk, meta); }
+                        catch (error) { rememberEncoderFailure(error); }
+                    },
+                    error: rememberEncoderFailure
                 });
                 audioEncoder.configure({
                     codec: 'mp4a.40.2',
@@ -2215,15 +2228,19 @@
             }
 
             await videoEncoder.flush();
-            if (audioEncoder) {
-                await audioEncoder.flush();
+            if (audioEncoder) await audioEncoder.flush();
+            if (encoderFailure) {
+                videoEncoder.close();
+                if (audioEncoder) audioEncoder.close();
+                throw encoderFailure;
             }
             muxer.finalize();
 
             const { buffer } = muxer.target;
             const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
             const actualContainer = await identifyVideoContainer(mp4Blob);
-            if (actualContainer !== 'mp4') throw new Error('MP4 encoder produced an invalid container');
+            if (actualContainer !== 'mp4' || mp4Blob.size < 2048)
+                throw new Error('MP4 encoder produced an empty or invalid video');
             videoEncoder.close();
             if (audioEncoder) audioEncoder.close();
             presentExportedVideo(mp4Blob, 'mp4');
