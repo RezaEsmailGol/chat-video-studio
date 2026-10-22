@@ -2934,11 +2934,14 @@
                         const thumbUrl = off.toDataURL('image/jpeg', 0.85);
                         const img = new Image();
                         img.onload = () => {
+                            if (!messages[index]) return;
+                            rememberChatEdit();
                             messages[index].mediaType = 'video';
                             messages[index].mediaImg = img;
                             messages[index].mediaVideo = video;
                             messages[index].mediaDataUrl = thumbUrl;
                             messages[index].mediaDuration = formatSecondsToMMSS(video.duration || 15);
+                            window.persistChatListChange?.({changed:true});
                             renderMessagesListUI();
                             renderChatFrame(null);
                         };
@@ -2949,6 +2952,8 @@
                     reader.onload = (ev) => {
                         const img = new Image();
                         img.onload = () => {
+                            if (!messages[index]) return;
+                            rememberChatEdit();
                             messages[index].mediaType = mediaType;
                             messages[index].mediaImg = img;
                             messages[index].mediaVideo = null;
@@ -2956,6 +2961,7 @@
                             if (mediaType === 'video' && !messages[index].mediaDuration) {
                                 messages[index].mediaDuration = '0:15';
                             }
+                            window.persistChatListChange?.({changed:true});
                             renderMessagesListUI();
                             renderChatFrame(null);
                         };
@@ -3287,6 +3293,7 @@
                     if (placeholderEl) placeholderEl.classList.add('hidden');
                     if (removeBtn) removeBtn.classList.remove('hidden');
                     renderChatFrame(null);
+                    window.studioScheduleSave?.();
                 };
                 img.src = e.target.result;
             };
@@ -3315,6 +3322,7 @@
                     appSettings.customBgImage = img;
                     appSettings.theme = 'custom_image';
                     renderChatFrame(null);
+                    window.studioScheduleSave?.();
                 };
                 img.src = e.target.result;
             };
