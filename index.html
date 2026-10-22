@@ -392,8 +392,14 @@
                 </div>
             </div>
 
+            <!-- Advanced controls are optional for everyday use. -->
+            <details id="advancedSettings" class="studio-advanced">
+                <summary aria-label="نمایش تنظیمات پیشرفته">
+                    <span><i class="fa-solid fa-sliders ml-2 text-sky-400" aria-hidden="true"></i>تنظیمات بیشتر: تصویر، فونت و سرعت</span>
+                    <span class="text-xs font-normal text-slate-400">برای شخصی‌سازی باز کنید</span>
+                </summary>
             <!-- Video & Appearance Settings -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+            <div class="studio-advanced-body bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
                 <h3 class="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
                     <i class="fa-solid fa-sliders text-sky-400"></i>
                     تنظیمات ویدیو، فونت و زمان‌بندی
@@ -517,6 +523,7 @@
                     </div>
                 </div>
             </div>
+            </details>
 
             <!-- Editable Messages List -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
@@ -2937,13 +2944,15 @@
         }
 
         function clearAllMessages() {
+            if (messages.length && !window.confirm('همه پیام‌های این پروژه حذف شوند؟ برای جلوگیری از حذف ناخواسته ابتدا از پروژه JSON بگیرید.')) return;
             stopPreviewAnimation();
             messages = [];
             renderMessagesListUI();
-            renderChatFrame(null);
+            showStaticFullChat();
         }
 
         function resetToDefaultScreenshotChat() {
+            if (messages.length && !window.confirm('پیام‌های فعلی با گفت‌وگوی نمونه جایگزین شوند؟ برای حفظ پیام‌ها ابتدا فایل JSON را دانلود کنید.')) return;
             stopPreviewAnimation();
             messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
             renderMessagesListUI();
@@ -2983,7 +2992,10 @@
             const selectedTheme = document.getElementById('settingTheme').value;
 
             if (selectedTheme === 'custom_image' && !appSettings.customBgImage) {
-                document.getElementById('bgFileInput').click();
+                // Updating the name must not unexpectedly open a wallpaper upload dialog.
+                if (document.activeElement?.id === 'settingTheme') {
+                    document.getElementById('bgFileInput').click();
+                }
             }
             appSettings.theme = selectedTheme;
             appSettings.headerMode = document.getElementById('settingHeaderMode').value;
@@ -3263,6 +3275,8 @@
             el('settingShowTyping').checked = settings.showTyping;
             el('settingSoundEffects').checked = settings.soundEffects;
             el('settingContactName').value = settings.contactName;
+            const quickName = el('quickContactName');
+            if (quickName) quickName.value = settings.contactName;
             el('newReplyName').value = settings.contactName;
             el('contactAvatarPlaceholder').textContent = (settings.contactName.trim()[0] || 'ر').toUpperCase();
             el('contactAvatarPreview').classList.toggle('hidden', !avatar);
@@ -3342,6 +3356,7 @@
     }
     function initialize() {
         const controls = document.createElement('section');
+        controls.id = 'studioProjectBar';
         controls.className = 'max-w-7xl w-full mx-auto px-4 lg:px-8 pt-4';
         controls.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-wrap items-center gap-2">' +
             '<label for="projectName" class="text-sm text-slate-300">نام پروژه:</label>' +
@@ -3350,7 +3365,7 @@
             '<button id="downloadProject" class="rounded-lg bg-slate-700 px-3 py-2 text-sm text-white">دانلود پروژه JSON</button>' +
             '<label for="importProject" class="cursor-pointer rounded-lg bg-slate-700 px-3 py-2 text-sm text-white">بازکردن پروژه JSON</label>' +
             '<input type="file" id="importProject" accept=".json,application/json" class="hidden">' +
-            '<span id="projectStatus" role="status" aria-live="polite" class="text-xs text-slate-400 w-full">ذخیره خودکار در همین مرورگر فعال است</span>' +
+            '<span id="projectStatus" role="status" aria-live="polite" class="text-xs text-slate-400 w-full">ذخیره خودکار در همین مرورگر فعال است • Ctrl+S برای ذخیره دستی</span>' +
             '</div>';
         document.querySelector('header').insertAdjacentElement('afterend', controls);
         el('saveProject').addEventListener('click', saveNow);
@@ -3364,6 +3379,12 @@
         });
         document.addEventListener('click', event => {
             if (event.target && event.target.closest('button') && !event.target.closest('#downloadProject')) scheduleSave();
+        });
+        document.addEventListener('keydown', event => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                saveNow();
+            }
         });
         readProject().then(async saved => {
             if (saved) { await applyProject(saved); await saveNow(); status('آخرین پروژه ذخیره‌شده بازیابی شد'); }
