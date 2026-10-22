@@ -2525,6 +2525,7 @@
 
             renderMessagesListUI();
             showStaticFullChat();
+            window.persistChatListChange?.({ changed: true });
         }
 
         function toggleEmojiPickerPanel() {
@@ -2835,7 +2836,8 @@
                 container.innerHTML = `
                     <div class="text-center py-10 bg-slate-950/60 rounded-xl border border-dashed border-slate-800 text-slate-400 text-xs space-y-2">
                         <i class="fa-regular fa-comment-dots text-2xl text-slate-500"></i>
-                        <p>هیچ پیامی در لیست وجود ندارد. از کادر بالا پیام جدید اضافه کنید!</p>
+                        <p>گفت‌وگو خالی است. اگر پیام‌ها را حذف کرده‌اید، این انتخاب در مرورگر حفظ می‌شود.</p>
+                        <button type="button" onclick="resetToDefaultScreenshotChat()" class="mt-3 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-200 focus-visible:outline-2 focus-visible:outline-sky-400">نمایش دوباره سناریوی معرفی</button>
                     </div>
                 `;
                 return;
@@ -3003,9 +3005,11 @@
         }
 
         function deleteMessage(index) {
+            if (!messages[index]) return;
             messages.splice(index, 1);
             renderMessagesListUI();
             renderChatFrame(null);
+            window.persistChatListChange?.({ cleared: messages.length === 0 });
         }
 
         function clearAllMessages() {
@@ -3014,6 +3018,8 @@
             messages = [];
             renderMessagesListUI();
             showStaticFullChat();
+            // An intentional empty conversation must survive a refresh.
+            window.persistChatListChange?.({ cleared: true });
         }
 
         function resetToDefaultScreenshotChat() {
@@ -3022,6 +3028,7 @@
             messages = JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES));
             renderMessagesListUI();
             showStaticFullChat();
+            window.persistChatListChange?.({ resetDemo: true });
         }
 
         function syncFontSizeControl(val) {
@@ -3184,6 +3191,11 @@
     let saveTimer = null;
     let restoring = false;
     let projectName = 'دموی معرفی Chat Video Studio';
+    // False for first visits; true only after a user deliberately empties the chat.
+    let demoDismissed = false;
+    let initialReadComplete = false;
+    let modifiedBeforeInitialRead = false;
+    let pendingFirstSave = false;
 
     function el(id) { return document.getElementById(id); }
     function status(message, error = false) {
@@ -3203,6 +3215,7 @@
             schemaVersion: 1,
             name: projectName,
             savedAt: new Date().toISOString(),
+            demoDismissed,
             settings: {
                 platform: ['telegram','bale','eitaa','whatsapp','rubika'].includes(s.platform) ? s.platform : 'telegram',
                 baleDate: String(s.baleDate ?? '۲۸ مهر'), baleShowJoinBanner: s.baleShowJoinBanner !== false,
@@ -3273,7 +3286,7 @@
             img.src = url;
         });
     }
-    async function applyProject(data) {
+    async function applyProject(data, { fromAutosave = false } = {}) {
         if (!data || data.format !== 'chat-video-studio' || data.schemaVersion !== 1 ||
             !Array.isArray(data.messages) || data.messages.length > 1000 ||
             !data.settings || typeof data.settings !== 'object') {
@@ -3326,10 +3339,18 @@
         settings.customBgImage = wallpaper;
         if (settings.theme === 'custom_image' && !wallpaper) settings.theme = 'classic_green';
 
+        // Existing saved empty projects (before demoDismissed was introduced)
+        // receive the current demonstration once. Explicitly-cleared modern
+        // projects remain empty on every reload; user-imported empty JSON stays empty.
+        const legacyEmptyAutosave = fromAutosave &&
+            normalized.length === 0 && typeof data.demoDismissed !== 'boolean';
         restoring = true;
         try {
             stopPreviewAnimation();
-            messages = normalized;
+            messages = legacyEmptyAutosave ?
+                JSON.parse(JSON.stringify(DEFAULT_SCREENSHOT_MESSAGES)) : normalized;
+            demoDismissed = legacyEmptyAutosave ? false :
+                (typeof data.demoDismissed === 'boolean' ? data.demoDismissed : normalized.length === 0);
             Object.assign(appSettings, settings);
             // Keep the persistent project up to date after old demo-name migration.
             projectName = String(data.name || 'پروژه جدید').slice(0, 120);
@@ -3377,6 +3398,10 @@
     async function saveNow() {
         clearTimeout(saveTimer);
         if (restoring) return;
+        if (!initialReadComplete) {
+            pendingFirstSave = true;
+            return;
+        }
         try {
             projectName = el('projectName').value.trim() || 'پروژه جدید';
             await storeProject(snapshot());
@@ -3388,9 +3413,27 @@
     }
     function scheduleSave() {
         if (restoring) return;
+        if (!initialReadComplete) {
+            modifiedBeforeInitialRead = true;
+            pendingFirstSave = true;
+            return;
+        }
         clearTimeout(saveTimer);
         saveTimer = setTimeout(saveNow, 800);
     }
+    // Message-edit actions use this rather than relying solely on a button click.
+    window.persistChatListChange = ({ cleared = false, resetDemo = false } = {}) => {
+        if (cleared) demoDismissed = true;
+        else if (resetDemo) demoDismissed = false;
+        if (!initialReadComplete) {
+            modifiedBeforeInitialRead = true;
+            pendingFirstSave = true;
+            return;
+        }
+        clearTimeout(saveTimer);
+        // Persist deletion without the autosave debounce so quick reloads keep it.
+        void saveNow();
+    };
     function downloadJSON() {
         projectName = el('projectName').value.trim() || 'پروژه جدید';
         const json = JSON.stringify(snapshot(), null, 2);
@@ -3452,8 +3495,25 @@
             }
         });
         readProject().then(async saved => {
-            if (saved) { await applyProject(saved); await saveNow(); status('آخرین پروژه ذخیره‌شده بازیابی شد'); }
-        }).catch(err => { console.warn('No local project loaded', err); status('ذخیره خودکار در این مرورگر در دسترس نیست', true); });
+            if (saved && !modifiedBeforeInitialRead) {
+                const wasLegacyEmpty = saved.messages?.length === 0 &&
+                    typeof saved.demoDismissed !== 'boolean';
+                await applyProject(saved, { fromAutosave: true });
+                status(wasLegacyEmpty ? 'سناریوی معرفی در پروژه خالی قدیمی بارگذاری شد' :
+                    'آخرین پروژه ذخیره‌شده بازیابی شد');
+                // Re-save normalized metadata, including the explicit deletion flag.
+                pendingFirstSave = true;
+            }
+        }).catch(err => {
+            console.warn('Stored project could not be loaded', err);
+            status('بازیابی پروژه ممکن نبود؛ برای پشتیبان‌گیری از JSON استفاده کنید.', true);
+        }).finally(() => {
+            initialReadComplete = true;
+            if (pendingFirstSave) {
+                pendingFirstSave = false;
+                void saveNow();
+            }
+        });
     }
     if (document.readyState === 'complete') initialize();
     else window.addEventListener('load', initialize, { once: true });
