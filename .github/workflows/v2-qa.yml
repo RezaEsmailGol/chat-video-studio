@@ -46,8 +46,20 @@ jobs:
             assert.equal(await page.evaluate(()=>messages.length),10);
             console.log('V2 OFFLINE SCRIPT + UNDO PASS',label);
             console.log('DEBUG BEFORE NEW',await page.evaluate(async()=>({
-              live:messages.length,auto:(await readProject())?.messages?.length,
-              main:(await readNamedProject('main'))?.messages?.length,
+              live:messages.length,
+              persisted:await new Promise((resolve,reject)=>{
+                const request=indexedDB.open('chat-video-studio',1);
+                request.onerror=()=>reject(request.error);
+                request.onsuccess=()=>{
+                  const db=request.result,tx=db.transaction('projects','readonly');
+                  const a=tx.objectStore('projects').get('autosave');
+                  const m=tx.objectStore('projects').get('project:main');
+                  tx.oncomplete=()=>resolve({auto:a.result?.messages?.length,
+                    main:m.result?.messages?.length,
+                    autoID:a.result?.projectId,mainID:m.result?.projectId});
+                  tx.onerror=()=>reject(tx.error);
+                };
+              }),
               active:document.getElementById('studioProjectsSelect').value
             })));
             // Project management must persist separate, selected copies.
@@ -55,8 +67,20 @@ jobs:
             await page.locator('#studioNewProject').click();
             await page.waitForFunction(()=>document.getElementById('studioProjectsSelect').options.length>=2);
             console.log('DEBUG AFTER NEW',await page.evaluate(async()=>({
-              live:messages.length,auto:(await readProject())?.messages?.length,
-              main:(await readNamedProject('main'))?.messages?.length,
+              live:messages.length,
+              persisted:await new Promise((resolve,reject)=>{
+                const request=indexedDB.open('chat-video-studio',1);
+                request.onerror=()=>reject(request.error);
+                request.onsuccess=()=>{
+                  const db=request.result,tx=db.transaction('projects','readonly');
+                  const a=tx.objectStore('projects').get('autosave');
+                  const m=tx.objectStore('projects').get('project:main');
+                  tx.oncomplete=()=>resolve({auto:a.result?.messages?.length,
+                    main:m.result?.messages?.length,
+                    autoID:a.result?.projectId,mainID:m.result?.projectId});
+                  tx.onerror=()=>reject(tx.error);
+                };
+              }),
               active:document.getElementById('studioProjectsSelect').value
             })));
             assert.equal(await page.evaluate(()=>messages.length),0);
