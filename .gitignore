@@ -1,0 +1,17 @@
+# Local caches and test output
+node_modules/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
+*.log
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+
+# The application itself is index.html — do not ignore it.
