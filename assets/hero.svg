@@ -20,8 +20,8 @@
 <path d="M87 90h30a9 9 0 0 1 9 9v13a9 9 0 0 1-9 9h-11l-11 8v-8h-8a9 9 0 0 1-9-9V99a9 9 0 0 1 9-9Z" transform="translate(5 -4)" fill="none" stroke="#4CF9C4" stroke-width="4"/>
 <path d="m102 98 0 18m-7-11 7-7 7 7" fill="none" stroke="#66D6FF" stroke-width="3" stroke-linecap="round"/>
 <text x="158" y="105" fill="#EAF9FF" font-family="Inter,Arial,sans-serif" font-size="48" font-weight="800">Chat <tspan fill="#42DDE3">Video</tspan> Studio</text>
-<text x="72" y="191" font-size="29" font-weight="700" fill="#F0FBFF" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">استودیو ساخت ویدیوی چت</text>
-<text x="72" y="233" font-size="21" fill="#BBD3E8" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">سناریوی فارسی بساز؛ ویدیو تحویل بگیر</text>
+<text x="535" y="191" font-size="29" font-weight="700" fill="#F0FBFF" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">استودیو ساخت ویدیوی چت</text>
+<text x="535" y="233" font-size="21" fill="#BBD3E8" font-family="Vazirmatn,Tahoma,Arial,sans-serif" direction="rtl" text-anchor="start">سناریوی فارسی بساز؛ ویدیو تحویل بگیر</text>
 <rect x="72" y="270" rx="16" width="468" height="54" fill="#14364C" stroke="#26C7C2" stroke-opacity=".35"/>
 <text x="306" y="306" text-anchor="middle" font-size="21" font-family="Vazirmatn,Tahoma,Arial,sans-serif" fill="#CFFAF5">۵ قالب چت  •  پیش‌نمایش  •  خروجی ویدیو</text>
 <g font-family="Vazirmatn,Tahoma,Arial,sans-serif" font-size="19" fill="#CDE5F2">
