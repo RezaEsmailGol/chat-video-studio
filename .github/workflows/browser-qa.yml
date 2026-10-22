@@ -127,14 +127,19 @@ jobs:
               const ext=await identifyVideoContainer(blob);
               const bytes=blob.size;
               const filename=document.getElementById('downloadVideoLink').download;
+              const headerText=new TextDecoder('latin1').decode(await blob.arrayBuffer());
+              const hasOpus=headerText.includes('A_OPUS');
+              const hasVideo=headerText.includes('V_VP8')||headerText.includes('V_VP9')||headerText.includes('V_MPEG4');
               window.Mp4Muxer=window.__qaMuxer;
               MediaRecorder.isTypeSupported=window.__qaSupports;
               appSettings.soundEffects=false;
-              return {ext,bytes,filename};
+              return {ext,bytes,filename,hasOpus,hasVideo};
             });
             assert.equal(fallback.ext,'webm','Forced WebM recorded wrong format');
             assert.ok(fallback.filename.endsWith('.webm'));
             assert.ok(fallback.bytes>2048);
+            assert.ok(fallback.hasOpus,'WebM sound-effects recording lacks an Opus audio track');
+            assert.ok(fallback.hasVideo,'WebM is missing its video track');
             console.log('WEBM + AUDIO ENABLED PASS',JSON.stringify(fallback));
             await page.evaluate(()=>closeExportModal());
 
