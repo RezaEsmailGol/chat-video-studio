@@ -3196,6 +3196,7 @@
     let initialReadComplete = false;
     let modifiedBeforeInitialRead = false;
     let pendingFirstSave = false;
+    let saveQueue = Promise.resolve();
 
     function el(id) { return document.getElementById(id); }
     function status(message, error = false) {
@@ -3404,7 +3405,11 @@
         }
         try {
             projectName = el('projectName').value.trim() || 'پروژه جدید';
-            await storeProject(snapshot());
+            const current = snapshot();
+            // Order writes so deleting several messages quickly cannot resurrect
+            // an earlier snapshot when IndexedDB operations finish out of order.
+            saveQueue = saveQueue.catch(() => {}).then(() => storeProject(current));
+            await saveQueue;
             status('ذخیره محلی انجام شد');
         } catch (err) {
             console.warn('Project autosave failed', err);
