@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "🔐 Security / گزارش امنیتی"
+    url: "https://github.com/RezaEsmailGol/chat-video-studio/security/advisories"
+    about: "Use private vulnerability reporting if enabled; do not disclose exploit details publicly."
+  - name: "🌐 Live demo / نسخه آنلاین"
+    url: "https://rezaesmailgol.github.io/chat-video-studio/"
+    about: "Test the latest public beta before opening a bug report."

@@ -1,15 +1,101 @@
-# Chat Video Studio
+<div align="center">
 
-An experimental Persian-first browser tool for creating animated, fictional chat conversations and exporting short videos.
+<img src="./assets/hero.svg" alt="Chat Video Studio — تصویر معرفی ابزار ساخت ویدیوی مکالمه" width="100%" />
 
-> Work in progress — do not use yet for production or public demos. Development happens through pull requests.
+# 🎬 Chat Video Studio
+**استودیو فارسی ساخت ویدیوی گفت‌وگوی نمایشی، مستقیم در مرورگر**
 
-## Development
+[🌐 اجرای آنلاین](https://rezaesmailgol.github.io/chat-video-studio/) · [🇬🇧 English](./README.en.md) · [🐛 گزارش باگ](https://github.com/RezaEsmailGol/chat-video-studio/issues) · [💡 پیشنهاد قابلیت](https://github.com/RezaEsmailGol/chat-video-studio/issues/new/choose)
 
-Source: `index.html` (single-file prototype). Requires a modern browser and an internet connection for CDN-hosted fonts/scripts.
+![License MIT](https://img.shields.io/badge/License-MIT-green)
+![Public Beta](https://img.shields.io/badge/Status-Public%20Beta-blue)
 
-Planned: reliable video export, project persistence, automated tests, and templates.
+</div>
 
-## Responsible use
+> [!IMPORTANT]
+> **نسخه آزمایشی (Beta).** این ابزار برای ساخت گفت‌وگوهای **ساختگی یا دارای مجوز** است؛ خروجی‌ها نباید به‌عنوان مکالمه واقعی یا مدرک اصیل معرفی شوند. قالب‌های پیام‌رسان صرفاً بازسازی نمایشی‌اند و رسمی یا وابسته به آن شرکت‌ها نیستند.
 
-Create fictional or authorized conversations only. Do not present generated conversations as genuine evidence or impersonate real people.
+## ✨ ویژگی‌ها
+
+یک گفت‌وگوی دوطرفه طراحی کن، متن، عکس، ایموجی و ریپلای اضافه کن، زمان نمایش هر پیام را تنظیم کن، پیش‌نمایش بگیر و ویدیو بساز.
+
+| بخش | امکانات |
+|---|---|
+| 💬 پوسته‌ها | تلگرام، واتساپ، بله، ایتا و روبیکا |
+| 📝 ویرایش | متن، عکس، ریپلای، ایموجی، تنظیم زمان، Undo / Redo |
+| 🎞️ خروجی | تصویر PNG، ویدیوی MP4 یا WebM بسته به مرورگر |
+| 📐 نسبت تصویر | عمودی ۹:۱۶، مربعی ۱:۱، افقی ۱۶:۹ |
+| 🎨 سفارشی‌سازی | واترمارک، موسیقی محلی، پس‌زمینه کروماکی |
+| 💾 ذخیره | چند پروژه مستقل در IndexedDB و پشتیبان JSON |
+| ⚡ شروع سریع | سناریوهای فارسی آماده و پیش‌نویس سفارشی قابل ویرایش |
+| 🌐 اجرا | کل منطق برنامه در یک فایل HTML، بدون ثبت‌نام |
+
+> تصویر بالای صفحه یک **طرح تبلیغاتی مفهومی** است؛ نمای دقیق و لحظه‌ای برنامه محسوب نمی‌شود.
+
+## 🚀 اجرا
+
+**تست مستقیم:** [بازکردن Chat Video Studio](https://rezaesmailgol.github.io/chat-video-studio/)
+
+**نسخه محلی:** مخزن را Clone کن و فایل <code>index.html</code> را با مرورگر باز کن. اگر با محدودیت دسترسی محلی مواجه شدی، داخل پوشه مخزن این دستورها را اجرا کن:
+
+    git clone https://github.com/RezaEsmailGol/chat-video-studio.git
+    cd chat-video-studio
+    python -m http.server 8000
+
+سپس نشانی [http://localhost:8000](http://localhost:8000) را باز کن. برای اجرا نیازی به نصب Node.js یا راه‌اندازی بک‌اند نیست. برای بارگذاری بعضی منابع خارجی ممکن است اینترنت لازم باشد.
+
+### چگونه ویدیو بسازیم؟
+
+1. یکی از پنج قالب را انتخاب و نام یا آواتار مخاطب را ویرایش کن.
+2. سناریوی اولیه را تغییر بده یا از سناریوهای فارسی شروع کن.
+3. ترتیب، متن و تأخیر پیام‌ها را مشخص و انیمیشن را بررسی کن.
+4. نسبت تصویر، واترمارک و موسیقی دلخواه را انتخاب کن.
+5. خروجی ویدیو را بساز؛ **فرمت واقعی می‌تواند MP4 یا WebM باشد**.
+6. از گزینه خروجی JSON برای پشتیبان‌گیری و انتقال پروژه استفاده کن.
+
+## 🧪 وضعیت آزمایش و محدودیت‌ها
+
+| مرورگر / محیط | نتیجه |
+|---|---|
+| Chromium / Chrome دسکتاپ | پیش‌نمایش پنج قالب، مدیریت پروژه و خروجی آزمایشی تأیید شده |
+| Firefox دسکتاپ | پیش‌نمایش، مدیریت پروژه و خروجی WebM آزمایش شده |
+| چیدمان از ۳۲۰ تا ۱۲۸۰ پیکسل | تست خودکار واکنش‌گرایی انجام شده |
+| Safari واقعی / iPhone و Android واقعی | **تأیید نهایی نشده** |
+| ویدیوهای طولانی و سخت‌افزار ضعیف | نیازمند تست بیشتر |
+
+**آنچه باید بدانید:**
+- خروجی «1080p» فعلاً از بوم پایه 750×1334 **بزرگ‌نمایی** می‌شود؛ رندر بومی Full HD نیست.
+- موسیقی با ترک صوتی WebM/Opus در Chromium تأیید شده، اما MP4 همراه صدا در همه مرورگرها تضمین نمی‌شود.
+- ویدیوی ضمیمه در بعضی مسیرهای ضبط زمان واقعی متحرک است؛ هنوز در همه دستگاه‌ها/سناریوها تأیید نشده.
+- Green Screen همان **سبز کروماکی** است، نه خروجی با شفافیت Alpha.
+- تولید سناریوی سفارشی در حال حاضر **آفلاین و قالب‌محور** است، نه هوش مصنوعی متصل به مدل مولد.
+- موسیقی محلی پس از رفرش دوباره باید انتخاب شود.
+- پروژه‌ها روی همان مرورگر ذخیره می‌شوند؛ برای انتقال یا جلوگیری از ازدست‌رفتن داده‌ها از JSON استفاده کن.
+
+[🔎 آخرین تست موفق V2](https://github.com/RezaEsmailGol/chat-video-studio/actions/runs/39745568024) · [گزارش مشکلات](https://github.com/RezaEsmailGol/chat-video-studio/issues)
+
+## 🧱 معماری و حریم خصوصی
+
+منطق برنامه، CSS و JavaScript اصلی در <code>index.html</code> است. فایل‌های README، مجوز و تصویر مخزن برای **مستندسازی** هستند و جزئی از اجرای برنامه نیستند. پروژه‌ها در **IndexedDB** همین مرورگر ذخیره می‌شوند؛ حساب کاربری یا سرور ذخیره چت نداریم. البته منابع خارجی فونت، ایموجی یا کتابخانه‌ها ممکن است درخواست شبکه دریافت کنند، پس ابزار را «کاملاً آفلاین» تصور نکن.
+
+کلید خصوصی یا API Key را **هرگز** در HTML عمومی وارد نکن.
+
+## 🗺️ نقشه راه
+
+- [x] پنج قالب چت، سناریوهای فارسی و پیام‌های قابل ویرایش
+- [x] کتابخانه چندپروژه‌ای و بکاپ JSON
+- [x] چند نسبت تصویر، موسیقی، واترمارک و کروماکی آزمایشی
+- [ ] تست iPhone/Safari و Android واقعی
+- [ ] تست عملکرد و مصرف حافظه در خروجی طولانی
+- [ ] رندر بومی Full HD و رسانه‌های صوتی/ویدیویی حرفه‌ای
+- [ ] تولید سناریو با AI فارسی از طریق اتصال امن سمت سرور
+
+## 🤝 مشارکت، امنیت و مجوز
+
+برای گزارش باگ یا درخواست قابلیت، [Issue ثبت کن](https://github.com/RezaEsmailGol/chat-video-studio/issues/new/choose). راهنمای مشارکت در [CONTRIBUTING.md](./CONTRIBUTING.md)، راهنمای گزارش امنیتی در [SECURITY.md](./SECURITY.md) و تاریخچه تغییرات در [CHANGELOG.md](./CHANGELOG.md) آمده است.
+
+**مجوز کد اصلی:** [MIT](./LICENSE). این مجوز شامل علائم تجاری، لوگوها، تصاویر و دارایی‌های اشخاص ثالث نمی‌شود.
+
+**توسعه‌دهنده:** [رضا اسماعیل گل](https://github.com/RezaEsmailGol)
+
+[English README](./README.en.md) · [دموی آنلاین](https://rezaesmailgol.github.io/chat-video-studio/) · [مخزن GitHub](https://github.com/RezaEsmailGol/chat-video-studio)
