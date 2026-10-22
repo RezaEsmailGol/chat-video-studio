@@ -1333,13 +1333,13 @@
             const totalSamples = Math.ceil((totalDurationMs / 1000) * sampleRate);
             const pcmData = new Float32Array(totalSamples);
 
-            if (!appSettings.soundEffects) {
+            if (!appSettings.soundEffects && !studioMusicBuffer) {
                 return pcmData;
             }
 
             const { schedule } = buildTimelineSchedule();
 
-            schedule.forEach(slot => {
+            if(appSettings.soundEffects)schedule.forEach(slot => {
                 const msg = messages[slot.index];
                 if (!msg) return;
                 const isRight = msg.side === 'right';
@@ -1387,6 +1387,15 @@
                 }
             });
 
+            if(studioMusicBuffer){
+                const left=studioMusicBuffer.getChannelData(0);
+                const right=studioMusicBuffer.numberOfChannels>1?studioMusicBuffer.getChannelData(1):left;
+                const ratio=studioMusicBuffer.sampleRate/sampleRate;
+                for(let i=0;i<totalSamples;i++){
+                    const idx=Math.floor(i*ratio)%studioMusicBuffer.length;
+                    pcmData[i]=Math.max(-.98,Math.min(.98,pcmData[i]+(left[idx]+right[idx])*.10));
+                }
+            }
             return pcmData;
         }
 
@@ -2370,15 +2379,15 @@
         }
 
         async function renderWithWebCodecsMp4(progressFill, percentText) {
-            const W = canvas.width;
-            const H = canvas.height;
+            const output=studioOutputCanvas();
+            const W=output.width,H=output.height;
             const fps = 30;
             const totalDurationMs = getTotalAnimationDuration();
             const totalFrames = Math.ceil((totalDurationMs / 1000) * fps);
             const sampleRate = 48000;
             const videoConfig = {
                 codec: 'avc1.420028', // H.264 baseline level 4.0: supports 750×1334 portrait canvas.
-                width: W, height: H, bitrate: 3_500_000,
+                width: W, height: H, bitrate: Math.min(8_000_000,Math.max(3_500_000,Math.round(W*H*2.5))),
                 framerate: fps
             };
             const supported = await VideoEncoder.isConfigSupported(videoConfig);
@@ -2389,7 +2398,7 @@
 
             // Check if AudioEncoder with AAC is supported so we can mux a real audio track into the MP4
             let useWebCodecsAudio = false;
-            if (appSettings.soundEffects && typeof window.AudioEncoder !== 'undefined' && typeof window.AudioData !== 'undefined') {
+            if ((appSettings.soundEffects || studioMusicBuffer) && typeof window.AudioEncoder !== 'undefined' && typeof window.AudioData !== 'undefined') {
                 try {
                     const support = await AudioEncoder.isConfigSupported({
                         codec: 'mp4a.40.2',
@@ -2404,7 +2413,7 @@
             }
 
             // If AudioEncoder AAC isn't available and user wants sound, use real-time MediaRecorder with audio stream
-            if (!useWebCodecsAudio && appSettings.soundEffects) {
+            if (!useWebCodecsAudio && (appSettings.soundEffects || studioMusicBuffer)) {
                 await renderWithMediaRecorder(progressFill, percentText);
                 return;
             }
@@ -2486,9 +2495,10 @@
             for (let frameIdx = 0; frameIdx <= totalFrames; frameIdx++) {
                 const timeMs = (frameIdx / fps) * 1000;
                 renderChatFrame(timeMs);
+                composeStudioFrame();
 
                 const timestampUs = Math.round((frameIdx / fps) * 1_000_000);
-                const videoFrame = new VideoFrame(canvas, { timestamp: timestampUs });
+                const videoFrame = new VideoFrame(output, { timestamp: timestampUs });
                 videoEncoder.encode(videoFrame, { keyFrame: frameIdx % 30 === 0 });
                 videoFrame.close();
                 // Cap asynchronous encode queues on slower machines.
@@ -2525,11 +2535,13 @@
             if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
                 throw new Error('This browser does not support recording from Canvas');
             }
-            if (appSettings.soundEffects) ensureAudioContext();
-            const canvasStream = canvas.captureStream(30);
+            if (appSettings.soundEffects || studioMusicBuffer) ensureAudioContext();
+            renderChatFrame(0);
+            const output=composeStudioFrame();
+            const canvasStream = output.captureStream(30);
             document.getElementById('exportProgressStatus').textContent = 'ضبط ویدیوی جایگزین در زمان واقعی...';
 
-            if (appSettings.soundEffects && audioDest) {
+            if ((appSettings.soundEffects || studioMusicBuffer) && audioDest) {
                 audioDest.stream.getAudioTracks().forEach(track => canvasStream.addTrack(track.clone()));
             }
 
@@ -2589,13 +2601,14 @@
             animState.lastTriggeredSoundIndex = -1;
             const totalDur = getTotalAnimationDuration();
             const startT = performance.now();
-
             recorder.start(100);
+            const musicSource=startStudioMusic();
 
             await new Promise((resolveAnim) => {
                 function step(now) {
                     const elapsed = now - startT;
                     const visibleCount = renderChatFrame(elapsed);
+                    composeStudioFrame();
 
                     if (visibleCount > 0 && visibleCount - 1 > animState.lastTriggeredSoundIndex) {
                         animState.lastTriggeredSoundIndex = visibleCount - 1;
@@ -2626,6 +2639,7 @@
                 presentExportedVideo(videoBlob, extension);
             } finally {
                 if (recorder.state !== 'inactive') recorder.stop();
+                try{musicSource?.stop()}catch(_){}
                 canvasStream.getTracks().forEach(track => track.stop());
             }
         }
