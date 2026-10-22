@@ -3613,6 +3613,7 @@
     let restoring = false;
     let projectName = 'دموی معرفی Chat Video Studio';
     let activeProjectId='main';
+    let lastLibraryRenderedProjectId=null;
     // False for first visits; true only after a user deliberately empties the chat.
     let demoDismissed = false;
     let initialReadComplete = false;
@@ -3734,13 +3735,16 @@
     async function refreshStudioProjectList(){
         const node=el('studioProjectsSelect');if(!node)return;
         const list=await listNamedProjects();
+        const previouslySelected=node.value;
         node.replaceChildren();
         for(const item of list){
             const opt=document.createElement('option');
             opt.value=item.id;opt.textContent=item.name;
             node.appendChild(opt);
         }
-        node.value=activeProjectId;
+        node.value=(lastLibraryRenderedProjectId===activeProjectId &&
+            list.some(item=>item.id===previouslySelected)) ? previouslySelected : activeProjectId;
+        lastLibraryRenderedProjectId=activeProjectId;
         const count=el('studioProjectCount');
         if(count)count.textContent=list.length+' پروژه ذخیره‌شده';
     }
@@ -4067,10 +4071,11 @@
             if (event.target && event.target.id !== 'newMsgText' && event.target.id !== 'importProject') scheduleSave();
         });
         document.addEventListener('change', event => {
-            if (event.target && event.target.id !== 'importProject') scheduleSave();
+            if (event.target && !['importProject','studioProjectsSelect'].includes(event.target.id)) scheduleSave();
         });
         document.addEventListener('click', event => {
-            if (event.target && event.target.closest('button') && !event.target.closest('#downloadProject')) scheduleSave();
+            const button=event.target?.closest?.('button');
+            if(button && !button.matches('#downloadProject,#saveProject,#studioOpenProject,#studioNewProject,#studioDuplicateProject,#studioDeleteProject'))scheduleSave();
         });
         document.addEventListener('keydown', event => {
             const modifier=event.ctrlKey||event.metaKey;
