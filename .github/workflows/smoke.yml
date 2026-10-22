@@ -1,0 +1,85 @@
+name: Chat Studio Smoke QA
+on:
+  push:
+    branches:
+      - main
+      - feat/initial-studio-and-projects
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Smoke test five templates, storage, mobile layout and video export
+        run: |
+          python3 -m http.server 8159 >/tmp/chat-studio.log 2>&1 &
+          node <<'NODE'
+          const {chromium}=require('playwright');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:1280,height:800}});
+            const errors=[];
+            page.on('pageerror',error=>errors.push(error.message));
+            await page.goto('http://127.0.0.1:8159/',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>window.chatStudioReady&&document.getElementById('platformRubika')&&window.studioProjectActions,null,{timeout:30000});
+            await page.evaluate(()=>window.chatStudioReady);
+            assert.equal(await page.evaluate(()=>messages.length),10,'default demo should have ten messages');
+            const templates=[['Telegram','telegram'],['Bale','bale'],['Eitaa','eitaa'],['WhatsApp','whatsapp'],['Rubika','rubika']];
+            for(const [id,expected] of templates){
+              await page.locator('#platform'+id).click();
+              const preview=await page.evaluate(()=>({
+                platform:appSettings.platform,
+                image:document.getElementById('chatCanvas').toDataURL('image/png').startsWith('data:image/png;base64,')
+              }));
+              assert.equal(preview.platform,expected);
+              assert.equal(preview.image,true);
+              console.log('TEMPLATE PASS',expected);
+            }
+            const aspectChecks=[['portrait','750x1334'],['square','720x720'],['landscape','1280x720']];
+            for(const [aspect,size] of aspectChecks){
+              await page.locator('#studioAspect').selectOption(aspect);
+              const dimensions=await page.evaluate(()=>{
+                const canvas=composeStudioFrame();
+                return canvas.width+'x'+canvas.height;
+              });
+              assert.equal(dimensions,size);
+            }
+            console.log('ASPECT COMPOSITION PASS');
+            await page.locator('#studioAspect').selectOption('portrait');
+            for(const width of [320,390,768,1280]){
+              await page.setViewportSize({width,height:850});
+              const scroll=await page.evaluate(()=>document.documentElement.scrollWidth);
+              assert.ok(scroll<=width+10,'Horizontal overflow at '+width+': '+scroll);
+            }
+            console.log('MOBILE RESPONSIVE PASS');
+            await page.evaluate(()=>{
+              appSettings.soundEffects=false;appSettings.showTyping=false;
+              messages=messages.slice(0,2).map(m=>({...m,delaySec:0.35}));
+              renderMessagesListUI();showStaticFullChat();
+            });
+            await page.evaluate(()=>exportChatVideoMP4());
+            const video=await page.evaluate(async()=>{
+              if(!window.lastChatVideoObjectUrl)return {error:document.getElementById('exportProgressStatus').textContent};
+              const blob=await(await fetch(window.lastChatVideoObjectUrl)).blob();
+              return {bytes:blob.size,container:await identifyVideoContainer(blob)};
+            });
+            assert.ok(video.bytes>2048,'Video not exported: '+JSON.stringify(video));
+            assert.ok(['mp4','webm'].includes(video.container),'Invalid container');
+            assert.deepEqual(errors,[],errors.join('; '));
+            console.log('VIDEO EXPORT PASS',JSON.stringify(video));
+            await browser.close();
+          })().catch(e=>{console.error('SMOKE QA FAILED',e);process.exit(1)});
+          NODE
