@@ -1800,9 +1800,11 @@
                 c.beginPath();
                 c.roundRect(mediaX, mediaY, mediaW, mediaH, 13);
                 c.clip();
-                c.drawImage(msg.mediaImg, mediaX, mediaY, mediaW, mediaH);
-
-                if (msg.mediaType === 'video') {
+                const live=animState.isExporting && msg.mediaType==='video' &&
+                    msg.mediaVideo && msg.mediaVideo.readyState>=2 && !msg.mediaVideo.paused;
+                try{c.drawImage(live?msg.mediaVideo:msg.mediaImg,mediaX,mediaY,mediaW,mediaH);}
+                catch(_){c.drawImage(msg.mediaImg,mediaX,mediaY,mediaW,mediaH);}
+                if(msg.mediaType==='video' && !live) {
                     c.fillStyle = 'rgba(0, 0, 0, 0.42)';
                     c.fillRect(mediaX, mediaY, mediaW, mediaH);
 
@@ -2446,7 +2448,8 @@
                     typeof window.VideoEncoder !== 'undefined' &&
                     typeof window.Mp4Muxer !== 'undefined'
                 );
-                if (hasWebCodecsMp4) {
+                const motionMedia=messages.some(m=>m.mediaType==='video'&&m.mediaVideo);
+                if (hasWebCodecsMp4 && !motionMedia) {
                     try {
                         await renderWithWebCodecsMp4(progressFill, percentText);
                     } catch (webCodecError) {
@@ -2695,6 +2698,7 @@
             animState.lastTriggeredSoundIndex = -1;
             const totalDur = getTotalAnimationDuration();
             const startT = performance.now();
+            let lastVideoStarted=-1;
             recorder.start(100);
             const musicSource=startStudioMusic();
 
@@ -2702,6 +2706,16 @@
                 function step(now) {
                     const elapsed = now - startT;
                     const visibleCount = renderChatFrame(elapsed);
+                    if(visibleCount>lastVideoStarted+1){
+                        for(let i=lastVideoStarted+1;i<visibleCount;i++){
+                            const video=messages[i]?.mediaVideo;
+                            if(video && messages[i].mediaType==='video'){
+                                video.muted=true;video.playsInline=true;
+                                try{video.currentTime=0;video.play().catch(()=>{});}catch(_){}
+                            }
+                        }
+                        lastVideoStarted=visibleCount-1;
+                    }
                     composeStudioFrame();
 
                     if (visibleCount > 0 && visibleCount - 1 > animState.lastTriggeredSoundIndex) {
@@ -2734,6 +2748,7 @@
             } finally {
                 if (recorder.state !== 'inactive') recorder.stop();
                 try{musicSource?.stop()}catch(_){}
+                for(const m of messages){try{m.mediaVideo?.pause()}catch(_){}}
                 canvasStream.getTracks().forEach(track => track.stop());
             }
         }
