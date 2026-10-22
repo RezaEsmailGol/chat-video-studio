@@ -17,7 +17,7 @@ jobs:
       - name: Install headless Chromium
         run: |
           npm install --no-save playwright@1.56.1
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium firefox webkit
       - name: Test all five skins, PNG, MP4/WebM and JSON
         run: |
           python3 -m http.server 8123 > /tmp/chat-video-http.log 2>&1 &
@@ -160,6 +160,54 @@ jobs:
             assert.equal(pageErrors.length,0,'browser uncaught errors');
             await browser.close();
           })().catch(err=>{console.error('QA FAILED',err);process.exit(1)});
+          NODE
+      - name: Firefox and WebKit cross-browser smoke
+        run: |
+          python3 -m http.server 8124 > /tmp/chat-video-cross-http.log 2>&1 &
+          node <<'NODE'
+          const {firefox,webkit} = require('playwright');
+          const assert = require('node:assert/strict');
+          (async ()=>{
+            for(const [name,engine] of [['firefox',firefox],['webkit',webkit]]) {
+              console.log('BROWSER START',name);
+              const browser=await engine.launch({headless:true});
+              const page=await browser.newPage({viewport:{width:1200,height:800}});
+              const errs=[];
+              page.on('pageerror',e=>errs.push(e.message));
+              await page.goto('http://127.0.0.1:8124/',{waitUntil:'domcontentloaded',timeout:40000});
+              await page.waitForFunction(()=>typeof window.selectChatPlatform==='function'&&!!document.getElementById('platformRubika'),null,{timeout:35000});
+              await page.evaluate(()=>{
+                appSettings.soundEffects=false;
+                messages=[
+                  {id:'a',side:'left',text:'سلام',time:'10:00',delaySec:.3},
+                  {id:'b',side:'right',text:'تست',time:'10:01',delaySec:.3}
+                ];renderMessagesListUI();showStaticFullChat();
+              });
+              const cases=[['Telegram','telegram'],['Bale','bale'],['Eitaa','eitaa'],['WhatsApp','whatsapp'],['Rubika','rubika']];
+              for(const [id,p] of cases){
+                await page.locator('#platform'+id).click();
+                const result=await page.evaluate(()=>({
+                  platform:appSettings.platform,
+                  imageOk:document.getElementById('chatCanvas').toDataURL('image/png').startsWith('data:image/png;base64,')
+                }));
+                assert.equal(result.platform,p);
+                assert.ok(result.imageOk);
+                console.log('CROSS PREVIEW PASS',name,p);
+              }
+              await page.evaluate(()=>exportChatVideoMP4());
+              const exportResult=await page.evaluate(async()=>{
+                const url=window.lastChatVideoObjectUrl;
+                if(!url)return {error:document.getElementById('exportProgressStatus').textContent};
+                const blob=await(await fetch(url)).blob();
+                return {type:await identifyVideoContainer(blob),size:blob.size};
+              });
+              assert.ok(exportResult.type==='mp4'||exportResult.type==='webm', name+' export failed '+JSON.stringify(exportResult));
+              assert.ok(exportResult.size>2048);
+              console.log('CROSS EXPORT PASS',name,JSON.stringify(exportResult));
+              assert.equal(errs.length,0, name+' uncaught browser errors: '+errs.join('; '));
+              await browser.close();
+            }
+          })().catch(e=>{console.error('CROSS QA FAILED',e);process.exit(1)});
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
