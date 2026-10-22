@@ -3980,7 +3980,92 @@
           const node=document.getElementById(id);
           node.addEventListener(node.type==='checkbox'?'change':'input',updateMessengerOptions);
         });
-      renderAllTabs();
+      // Quick contact editor and simple actions: accessible before advanced settings.
+      const quick = document.createElement('div');
+      quick.className = 'studio-quick-bar';
+      quick.setAttribute('aria-label','تنظیمات سریع چت');
+      quick.innerHTML =
+        '<div><label for="quickContactName"><i class="fa-solid fa-user-pen ml-1" aria-hidden="true"></i>نام مخاطب در ویدیو</label>'+
+        '<input type="text" id="quickContactName" maxlength="150" dir="auto" autocomplete="off" aria-label="نام مخاطب" /></div>'+
+        '<button type="button" id="quickAvatarButton" class="px-3 py-2 text-sm rounded-xl bg-slate-800 border border-slate-700 text-slate-100 hover:bg-slate-700">'+
+        '<i class="fa-regular fa-image ml-1"></i>عکس مخاطب</button>'+
+        '<button type="button" id="quickMoreButton" class="px-3 py-2 text-sm rounded-xl bg-slate-800 border border-slate-700 text-slate-100 hover:bg-slate-700">'+
+        '<i class="fa-solid fa-sliders ml-1"></i>تنظیمات بیشتر</button>';
+      const groupAfter = panel.querySelector('[role="group"]');
+      groupAfter.insertAdjacentElement('afterend',quick);
+      const hint=document.createElement('p');
+      hint.id='studioTemplateHint';
+      hint.className='studio-template-hint';
+      hint.setAttribute('role','status');
+      hint.setAttribute('aria-live','polite');
+      quick.insertAdjacentElement('afterend',hint);
+      const quickName=document.getElementById('quickContactName');
+      quickName.value=String(appSettings.contactName||'رضا اسماعیل گل');
+      quickName.addEventListener('input',()=>{
+        const input=document.getElementById('settingContactName');
+        if(input) {input.value=quickName.value;updateSettings();}
+      });
+      document.getElementById('quickAvatarButton').addEventListener('click',()=>{
+        document.getElementById('avatarFileInput')?.click();
+      });
+      document.getElementById('quickMoreButton').addEventListener('click',()=>{
+        const advanced=document.getElementById('advancedSettings');
+        if(advanced){advanced.open=true;advanced.scrollIntoView({behavior:'smooth',block:'start'});}
+      });
+
+      // Wrap the existing tab render function to keep the short per-platform guidance in sync.
+      const renderBeforeHints=window.updatePlatformTabs;
+      const hints={
+        telegram:'تلگرام: ظاهر کلاسیک یا شب را از تنظیمات بیشتر انتخاب کنید.',
+        bale:'بله: تاریخ و پیام پیوستن مخاطب را از تنظیمات اختصاصی تغییر دهید.',
+        eitaa:'ایتا: وضعیت آخرین بازدید و پیام راهنمای چت خالی قابل تغییر است.',
+        whatsapp:'واتساپ: وضعیت مخاطب، تاریخ و اعلان رمزنگاری نمایشی قابل تنظیم است.',
+        rubika:'روبیکا: ظاهر روشن و پس‌زمینه سبز/زرد؛ متن کادر پیام قابل ویرایش است.'
+      };
+      window.updatePlatformTabs=function(){
+        renderBeforeHints();
+        hint.textContent=hints[appSettings.platform] || hints.telegram;
+        const nameValue=String(appSettings.contactName||'رضا اسماعیل گل');
+        if(document.activeElement!==quickName)quickName.value=nameValue;
+      };
+      // All platform button listeners refer to the global method, so wrap it too.
+      const selectBeforeHints=window.selectChatPlatform;
+      window.selectChatPlatform=function(platform){
+        selectBeforeHints(platform);
+        window.updatePlatformTabs();
+      };
+
+      const toast=document.createElement('div');
+      toast.className='studio-toast';toast.id='studioToast';
+      toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');
+      document.body.append(toast);
+      let toastTimer;
+      function notify(text){
+        clearTimeout(toastTimer);
+        toast.textContent=text;toast.classList.add('is-visible');
+        toastTimer=setTimeout(()=>toast.classList.remove('is-visible'),3000);
+      }
+      const projectBar=document.querySelector('#studioProjectBar > div');
+      if(projectBar){
+        projectBar.classList.add('studio-card');
+        const copy=document.createElement('button');
+        copy.type='button';copy.id='copyStudioLink';
+        copy.className='rounded-lg bg-slate-800 border border-slate-600 hover:bg-slate-700 px-3 py-2 text-sm text-white';
+        copy.innerHTML='<i class="fa-solid fa-link ml-1"></i>کپی لینک برنامه';
+        copy.addEventListener('click',async()=>{
+          const url='https://rezaesmailgol.github.io/chat-video-studio/';
+          try {
+            if(!navigator.clipboard?.writeText)throw new Error('Clipboard API unavailable');
+            await navigator.clipboard.writeText(url);
+            notify('لینک تست برنامه کپی شد');
+          } catch (_) {
+            window.prompt('لینک برنامه برای اشتراک‌گذاری:',url);
+          }
+        });
+        const status=document.getElementById('projectStatus');
+        status?.insertAdjacentElement('beforebegin',copy);
+      }
+      window.updatePlatformTabs();
     })();
     </script>
 </body>
