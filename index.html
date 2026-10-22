@@ -170,6 +170,31 @@
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
         }
+
+        /* Comfortable mobile editing: readable message cards and touch controls. */
+        #studioScenarioPacks button, #studioUndo, #studioRedo { touch-action: manipulation; }
+        #studioScenarioPacks button:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+        #studioUndo:disabled, #studioRedo:disabled { opacity: .38; cursor: not-allowed; }
+        .studio-browser-check {
+            display:flex;align-items:center;gap:.55rem;
+            flex-wrap:wrap;font-size:.74rem;color:#a4bacd;
+            padding:.6rem .8rem;margin-top:.5rem;
+            border-radius:.75rem;border:1px solid rgba(148,163,184,.16);
+            background:rgba(15,23,42,.45);
+        }
+        .studio-browser-check strong { color:#cbd5e1;font-weight:600; }
+        .studio-browser-check button {
+            background:#1e293b;color:#e2e8f0;padding:.45rem .65rem;
+            border:1px solid #475569;border-radius:.6rem;
+        }
+        @media(max-width:640px){
+            #studioScenarioPacks { padding: .75rem; }
+            #studioScenarioPacks button { min-height: 46px; }
+            #studioUndo,#studioRedo { min-height: 42px; }
+            #studioPreview { min-width:0; }
+            #chatCanvas { width:auto; height:auto; max-width:100%; object-fit:contain; }
+            .studio-header-actions { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -3522,6 +3547,7 @@
                 }
             }
             if (window.updatePlatformTabs) window.updatePlatformTabs();
+            window.studioResetUndo?.();
             renderMessagesListUI();
             showStaticFullChat();
         } finally {
@@ -3630,9 +3656,18 @@
             if (event.target && event.target.closest('button') && !event.target.closest('#downloadProject')) scheduleSave();
         });
         document.addEventListener('keydown', event => {
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+            const modifier=event.ctrlKey||event.metaKey;
+            if(!modifier || event.altKey)return;
+            const key=event.key.toLowerCase();
+            if(key==='s') {event.preventDefault();saveNow();return;}
+            const editing=event.target?.closest?.('input, textarea, [contenteditable="true"]');
+            if(editing || animState.isExporting)return;
+            if(key==='z') {
                 event.preventDefault();
-                saveNow();
+                if(event.shiftKey)window.studioRedo?.();
+                else window.studioUndo?.();
+            } else if(key==='y' && !event.shiftKey){
+                event.preventDefault();window.studioRedo?.();
             }
         });
         const initialHydration = readProject().then(async saved => {
