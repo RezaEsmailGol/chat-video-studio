@@ -1,0 +1,108 @@
+name: Browser QA (temporary)
+on:
+  push:
+    branches:
+      - feat/initial-studio-and-projects
+permissions:
+  contents: read
+jobs:
+  verify-five-templates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install headless Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test all five skins, PNG, MP4/WebM and JSON
+        run: |
+          python3 -m http.server 8123 > /tmp/chat-video-http.log 2>&1 &
+          node <<'NODE'
+          const {chromium} = require('playwright');
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const path = require('node:path');
+          (async () => {
+            fs.mkdirSync('qa-screens', {recursive:true});
+            const browser = await chromium.launch({headless:true, args:['--no-sandbox']});
+            const context = await browser.newContext({viewport:{width:1440,height:900},acceptDownloads:true});
+            const page = await context.newPage();
+            const pageErrors=[];
+            page.on('pageerror',error=>pageErrors.push(error.message));
+            page.on('console',message=>{if(message.type()==='error') console.log('Browser console:',message.text().slice(0,300))});
+            await page.goto('http://127.0.0.1:8123/',{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(() => typeof window.selectChatPlatform==='function' && !!document.getElementById('platformRubika'),{timeout:60000});
+            await page.evaluate(async()=>{
+              if(document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r,3000))]);
+              appSettings.soundEffects=false;
+              appSettings.showTyping=false;
+              messages=[
+                {id:'qa1',side:'left',text:'سلام! وقت بخیر 👋',time:'10:00',delaySec:.3,replyName:'',replyText:''},
+                {id:'qa2',side:'right',text:'سلام، تست کیفیت تصویر ✅',time:'10:01',delaySec:.3,replyName:'',replyText:''}
+              ];
+              renderMessagesListUI();showStaticFullChat();
+            });
+            const names={telegram:'Telegram',bale:'Bale',eitaa:'Eitaa',whatsapp:'WhatsApp',rubika:'Rubika'};
+            for(const [platform,suffix] of Object.entries(names)){
+              await page.locator('#platform'+suffix).click();
+              const state=await page.evaluate(()=>{
+                const c=document.getElementById('chatCanvas');
+                return {platform:appSettings.platform,width:c.width,height:c.height,
+                  png:c.toDataURL('image/png').slice(0,35),
+                  pixel:Array.from(c.getContext('2d').getImageData(c.width/2,120,1,1).data),
+                  snapshotPlatform:snapshot().settings.platform};
+              });
+              assert.equal(state.platform,platform);
+              assert.equal(state.snapshotPlatform,platform);
+              assert.ok(state.width>=720&&state.height>=1000);
+              assert.ok(state.png.startsWith('data:image/png;base64,'));
+              await page.locator('#chatCanvas').screenshot({path:'qa-screens/'+platform+'.png'});
+              console.log('PREVIEW PASS',platform,JSON.stringify(state));
+              const project=await page.evaluate(async()=>{let snap=snapshot();await applyProject(snap);return appSettings.platform});
+              assert.equal(project,platform);
+              await page.evaluate(()=>{appSettings.soundEffects=false;appSettings.showTyping=false;});
+              await page.evaluate(()=>exportChatVideoMP4());
+              const result=await page.evaluate(async()=>{
+                const blob=await (await fetch(window.lastChatVideoObjectUrl)).blob();
+                const magic=Array.from(new Uint8Array(await blob.slice(0,16).arrayBuffer()));
+                const ext=await identifyVideoContainer(blob);
+                return {bytes:blob.size,mime:blob.type,ext,magic,
+                  filename:document.getElementById('downloadVideoLink').download,
+                  resultVisible:!document.getElementById('exportResultView').classList.contains('hidden'),
+                  message:document.getElementById('exportProgressStatus').textContent};
+              });
+              assert.ok(result.resultVisible,'export result did not show: '+result.message);
+              assert.ok(result.bytes>2048,'tiny or empty output');
+              assert.ok(['mp4','webm'].includes(result.ext),'unexpected format');
+              assert.ok(result.filename.endsWith('.'+result.ext),'wrong extension');
+              console.log('EXPORT PASS',platform,JSON.stringify(result));
+              await page.evaluate(()=>closeExportModal());
+            }
+            // Narrow screen UI should still show preview and tabs.
+            await page.setViewportSize({width:390,height:844});
+            await page.locator('#platformRubika').click();
+            const mobile=await page.evaluate(()=>({
+              pageWidth:document.documentElement.scrollWidth,
+              viewportWidth:innerWidth,
+              canvasWidth:document.getElementById('chatCanvas').getBoundingClientRect().width
+            }));
+            await page.screenshot({path:'qa-screens/mobile.png',fullPage:true});
+            assert.ok(mobile.pageWidth<=mobile.viewportWidth+12,'mobile horizontal overflow');
+            assert.ok(mobile.canvasWidth>190);
+            console.log('MOBILE PASS',JSON.stringify(mobile));
+            // Fail only for unexpected script errors; CDN/font network warnings are separate.
+            console.log('Browser page errors:',JSON.stringify(pageErrors));
+            assert.equal(pageErrors.length,0,'browser uncaught errors');
+            await browser.close();
+          })().catch(err=>{console.error('QA FAILED',err);process.exit(1)});
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: five-template-previews
+          path: qa-screens/
+          if-no-files-found: ignore
