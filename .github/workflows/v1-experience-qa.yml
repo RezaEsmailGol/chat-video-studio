@@ -100,7 +100,21 @@ jobs:
                 assert.ok(dimensions.canvas>180 && dimensions.canvas<=dimensions.inner,
                   label+' canvas bad '+width+': '+JSON.stringify(dimensions));
                 assert.equal(dimensions.buttons,3);
-                console.log('RESPONSIVE PASS',label,width,JSON.stringify(dimensions));
+                const mobileNav=await page.evaluate(()=>{
+                  const el=document.getElementById('studioMobileNav');
+                  return {visible:getComputedStyle(el).display!=='none',links:el.querySelectorAll('a').length,
+                    exportButton:!!el.querySelector('button[onclick="exportChatVideoMP4()"]')};
+                });
+                assert.equal(mobileNav.visible,width<768,label+' mobile menu visibility '+width);
+                assert.equal(mobileNav.links,2);
+                assert.equal(mobileNav.exportButton,true);
+                if(width===375) {
+                  await page.locator('#studioMobileNav a[href="#studioEditor"]').click();
+                  assert.equal(await page.evaluate(()=>location.hash),'#studioEditor');
+                  await page.locator('#studioMobileNav a[href="#studioPreview"]').click();
+                  assert.equal(await page.evaluate(()=>location.hash),'#studioPreview');
+                }
+                console.log('RESPONSIVE PASS',label,width,JSON.stringify({...dimensions,mobileNav}));
               }
               if(label==='chromium'){
                 await page.setViewportSize({width:1280,height:800});
