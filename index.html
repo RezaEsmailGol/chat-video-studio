@@ -533,13 +533,13 @@
                             <i class="fa-solid fa-comments text-emerald-400"></i>
                             لیست پیام‌های چت
                         </h3>
-                        <span id="msgCountBadge" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">12 پیام</span>
+                        <span id="msgCountBadge" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">۱۰ پیام</span>
                     </div>
 
                     <div class="flex items-center gap-2">
                         <button onclick="resetToDefaultScreenshotChat()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1 border border-slate-700">
                             <i class="fa-solid fa-rotate-left text-sky-400"></i>
-                            <span>بازگردانی چت عکس نمونه</span>
+                            <span>بازگردانی سناریوی معرفی</span>
                         </button>
                         <button onclick="clearAllMessages()" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 text-xs transition flex items-center gap-1 border border-rose-800/50">
                             <i class="fa-solid fa-trash-can"></i>
@@ -583,7 +583,7 @@
                 <!-- Playback Progress & Scrubber Bar -->
                 <div class="w-full max-w-[420px] mt-3.5 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
                     <div class="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-                        <span id="playbackStepLabel">نمایش ۱۲ از ۱۲ پیام</span>
+                        <span id="playbackStepLabel">نمایش ۱۰ از ۱۰ پیام</span>
                         <div class="flex items-center gap-2">
                             <button onclick="stepBackward()" class="hover:text-white transition px-1" title="پیام قبلی">
                                 <i class="fa-solid fa-backward-step"></i>
@@ -603,6 +603,20 @@
             </div>
         </section>
     </main>
+
+    <!-- Public GitHub repository, always visible at the bottom of the app. -->
+    <footer class="w-full max-w-7xl mx-auto px-4 lg:px-8 pb-7 pt-2" role="contentinfo">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-xs text-slate-400">
+            <span>Chat Video Studio — ساخته‌شده توسط رضا اسماعیل گل | مخصوص گفت‌وگوهای نمایشی</span>
+            <a href="https://github.com/RezaEsmailGol/chat-video-studio" target="_blank" rel="noopener noreferrer"
+               aria-label="مشاهده کد پروژه Chat Video Studio در GitHub"
+               class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-slate-100 hover:bg-slate-700 hover:text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400">
+                <i class="fa-brands fa-github text-base" aria-hidden="true"></i>
+                <span>مشاهده پروژه در GitHub</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true"></i>
+            </a>
+        </div>
+    </footer>
 
     <!-- Video Export Complete / Progress Modal -->
     <div id="exportModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -655,112 +669,95 @@
     </div>
 
     <script>
+        // Fresh-visit demonstration. Saved projects are restored independently.
         const DEFAULT_SCREENSHOT_MESSAGES = [
             {
-                id: 'm1',
-                side: 'left',
-                text: 'سلام! چطوری؟ کجایی کم‌پیدایی؟ 👋',
-                time: '10:14 AM',
-                delaySec: 1.6,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm2',
+                id: 'demo_1',
                 side: 'right',
-                text: 'سلام عزیزم، ممنونم، درگیر کارا بودم ❤️',
-                time: '10:15 AM',
-                delaySec: 1.5,
+                text: "سلام رضا! Chat Video Studio چیه؟ 👋",
+                time: '10:14',
+                delaySec: 1.2,
                 replyName: '',
                 replyText: ''
             },
             {
-                id: 'm3',
-                side: 'right',
-                text: 'تو چطوری؟ خسته نباشی',
-                time: '10:15 AM',
-                delaySec: 1.4,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm4',
+                id: 'demo_2',
                 side: 'left',
-                text: 'سلامتی، شکر خدا. پروژه جدید چطور پیش میره؟',
-                time: '10:16 AM',
-                delaySec: 1.8,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm5',
-                side: 'right',
-                text: 'عالیه، امشب بخش خروجیش تموم میشه ان‌شاءالله ✨',
-                time: '10:17 AM',
-                delaySec: 2.0,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm6',
-                side: 'left',
-                text: 'وای چه عالی! حتماً خبرم کن ببینمش 😍',
-                time: '10:18 AM',
-                delaySec: 1.5,
-                replyName: 'رضا اسماعیل گل',
-                replyText: 'عالیه، امشب بخش خروجیش تم...'
-            },
-            {
-                id: 'm7',
-                side: 'right',
-                text: 'حتماً، حتماً! حالمون خوب میشه پاتوق کنیم یه روز',
-                time: '10:19 AM',
-                delaySec: 1.8,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm8',
-                side: 'left',
-                text: 'پایه ام شدید! کی وقتت آزاده؟',
-                time: '10:20 AM',
-                delaySec: 1.5,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm9',
-                side: 'right',
-                text: 'آخر هفته چطوره؟ پنجشنبه عصر؟',
-                time: '10:21 AM',
-                delaySec: 1.6,
-                replyName: '',
-                replyText: ''
-            },
-            {
-                id: 'm10',
-                side: 'left',
-                text: 'عالیه، پنجشنبه ساعت ۵ میبینیمت قهوه چی؟ ☕️',
-                time: '10:22 AM',
+                text: "سلام! اینجا می‌تونی گفت‌وگوهای نمایشی بسازی و ازشون ویدیو بگیری 🎬",
+                time: '10:14',
                 delaySec: 1.7,
                 replyName: '',
                 replyText: ''
             },
             {
-                id: 'm11',
+                id: 'demo_3',
                 side: 'right',
-                text: 'حله جیگر، حتماً همونجا میبینمتان! 👍',
-                time: '10:22 AM',
+                text: "چه پیام‌رسان‌هایی داره؟ 🤔",
+                time: '10:15',
+                delaySec: 1.2,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_4',
+                side: 'left',
+                text: "تلگرام، بله، ایتا، واتساپ و روبیکا! فقط قالب رو انتخاب کن ✨",
+                time: '10:15',
+                delaySec: 1.5,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_5',
+                side: 'right',
+                text: "می‌تونم متن، عکس، ایموجی و ریپلای اضافه کنم؟",
+                time: '10:16',
                 delaySec: 1.4,
                 replyName: '',
                 replyText: ''
             },
             {
-                id: 'm12',
+                id: 'demo_6',
                 side: 'left',
-                text: 'قربونت، فعلاً مراقب خودت باش 👋🔥',
-                time: '10:23 AM',
-                delaySec: 1.5,
+                text: "آره! زمان پیام و سرعت نمایش رو هم می‌تونی تنظیم کنی ✅",
+                time: '10:16',
+                delaySec: 1.6,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_7',
+                side: 'right',
+                text: "اگه صفحه رو ببندم، پروژه‌ام ذخیره می‌شه؟",
+                time: '10:17',
+                delaySec: 1.4,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_8',
+                side: 'left',
+                text: "بله، توی همین مرورگر ذخیره می‌شه؛ برای پشتیبان‌گیری هم JSON بگیر 💾",
+                time: '10:17',
+                delaySec: 1.7,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_9',
+                side: 'right',
+                text: "عالیه! بزن بریم یه ویدیو بسازیم 🚀",
+                time: '10:18',
+                delaySec: 1.2,
+                replyName: '',
+                replyText: ''
+            },
+            {
+                id: 'demo_10',
+                side: 'left',
+                text: "روی «پخش انیمیشن» یا «خروجی ویدیو» بزن و نتیجه رو ببین 🎥",
+                time: '10:18',
+                delaySec: 1.7,
                 replyName: '',
                 replyText: ''
             }
@@ -3186,7 +3183,7 @@
     let dbPromise = null;
     let saveTimer = null;
     let restoring = false;
-    let projectName = 'پروژه جدید';
+    let projectName = 'دموی معرفی Chat Video Studio';
 
     function el(id) { return document.getElementById(id); }
     function status(message, error = false) {
@@ -3428,7 +3425,7 @@
         controls.className = 'max-w-7xl w-full mx-auto px-4 lg:px-8 pt-4';
         controls.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-wrap items-center gap-2">' +
             '<label for="projectName" class="text-sm text-slate-300">نام پروژه:</label>' +
-            '<input id="projectName" value="پروژه جدید" maxlength="120" aria-label="نام پروژه" class="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-white flex-1 min-w-32">' +
+            '<input id="projectName" value="دموی معرفی Chat Video Studio" maxlength="120" aria-label="نام پروژه" class="bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm text-white flex-1 min-w-32">' +
             '<button id="saveProject" class="rounded-lg bg-emerald-700 px-3 py-2 text-sm text-white">ذخیره</button>' +
             '<button id="downloadProject" class="rounded-lg bg-slate-700 px-3 py-2 text-sm text-white">دانلود پروژه JSON</button>' +
             '<label for="importProject" class="cursor-pointer rounded-lg bg-slate-700 px-3 py-2 text-sm text-white">بازکردن پروژه JSON</label>' +
