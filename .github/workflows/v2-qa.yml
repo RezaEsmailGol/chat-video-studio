@@ -45,10 +45,20 @@ jobs:
             await page.locator('#studioUndo').click();
             assert.equal(await page.evaluate(()=>messages.length),10);
             console.log('V2 OFFLINE SCRIPT + UNDO PASS',label);
+            console.log('DEBUG BEFORE NEW',await page.evaluate(async()=>({
+              live:messages.length,auto:(await readProject())?.messages?.length,
+              main:(await readNamedProject('main'))?.messages?.length,
+              active:document.getElementById('studioProjectsSelect').value
+            })));
             // Project management must persist separate, selected copies.
             page.once('dialog',d=>d.accept());
             await page.locator('#studioNewProject').click();
             await page.waitForFunction(()=>document.getElementById('studioProjectsSelect').options.length>=2);
+            console.log('DEBUG AFTER NEW',await page.evaluate(async()=>({
+              live:messages.length,auto:(await readProject())?.messages?.length,
+              main:(await readNamedProject('main'))?.messages?.length,
+              active:document.getElementById('studioProjectsSelect').value
+            })));
             assert.equal(await page.evaluate(()=>messages.length),0);
             const newId=await page.evaluate(()=>document.getElementById('studioProjectsSelect').value);
             await page.locator('#projectName').fill('پروژه تست ویدیو');
