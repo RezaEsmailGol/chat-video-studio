@@ -4045,8 +4045,10 @@
         toast.textContent=text;toast.classList.add('is-visible');
         toastTimer=setTimeout(()=>toast.classList.remove('is-visible'),3000);
       }
-      const projectBar=document.querySelector('#studioProjectBar > div');
-      if(projectBar){
+      function enhanceProjectBar(){
+        const projectBar=document.querySelector('#studioProjectBar > div');
+        if(!projectBar||document.getElementById('copyStudioLink'))return;
+        
         projectBar.classList.add('studio-card');
         const copy=document.createElement('button');
         copy.type='button';copy.id='copyStudioLink';
@@ -4065,6 +4067,8 @@
         const status=document.getElementById('projectStatus');
         status?.insertAdjacentElement('beforebegin',copy);
       }
+      if(document.readyState==='complete') enhanceProjectBar();
+      else window.addEventListener('load',enhanceProjectBar,{once:true});
       window.updatePlatformTabs();
     })();
     </script>
