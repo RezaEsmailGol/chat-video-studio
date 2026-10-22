@@ -29,8 +29,12 @@ jobs:
             const page=await context.newPage();
             const errors=[];page.on('pageerror',e=>errors.push(e.message));
             const url='http://127.0.0.1:8128/';
-            const awaitReady=()=>page.waitForFunction(()=>document.getElementById('projectName')&&
-              document.getElementById('platformRubika')&&typeof window.persistChatListChange==='function');
+            const awaitReady=async()=>{
+              await page.waitForFunction(()=>document.getElementById('projectName')&&
+                document.getElementById('platformRubika')&&
+                typeof window.persistChatListChange==='function'&&!!window.chatStudioReady);
+              await page.evaluate(()=>window.chatStudioReady);
+            };
             const readDB=()=>page.evaluate(async()=>new Promise((resolve,reject)=>{
               const request=indexedDB.open('chat-video-studio',1);
               request.onerror=()=>reject(request.error);
