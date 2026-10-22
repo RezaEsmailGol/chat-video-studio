@@ -881,7 +881,7 @@
                     entry.failed = true;
                 }
             };
-            img.src = APPLE_EMOJI_CDN + fullCode + '.png';
+            img.src = APPLE_EMOJI_CDN + (fullCode === '2615-fe0f' ? strippedCode : fullCode) + '.png';
             return entry;
         }
 
@@ -2071,7 +2071,9 @@
                     await renderWithMediaRecorder(progressFill, percentText);
                 }
             } catch (err) {
-                console.warn('WebCodecs fallback to MediaRecorder:', err);
+                console.info('WebCodecs unavailable; using MediaRecorder:', err.message || err);
+                document.getElementById('exportProgressStatus').textContent =
+                    'ضبط ویدیوی سازگار با مرورگر...';
                 try {
                     await renderWithMediaRecorder(progressFill, percentText);
                 } catch (fallbackErr) {
@@ -2546,7 +2548,7 @@
                 btn.title = emojiChar;
 
                 const img = document.createElement('img');
-                img.src = APPLE_EMOJI_CDN + fullCode + '.png';
+                img.src = APPLE_EMOJI_CDN + (fullCode === '2615-fe0f' ? strippedCode : fullCode) + '.png';
                 img.alt = emojiChar;
                 img.className = 'w-6 h-6 object-contain pointer-events-none';
                 img.onerror = function () {
@@ -3865,7 +3867,7 @@
         c.fillStyle=ink;c.strokeStyle=ink;c.lineWidth=2.4;c.lineCap='round';c.lineJoin='round';
         if(wa) {
           avatar(c,43,46,29,true);
-          c.textAlign='left';c.direction='auto';c.textBaseline='middle';
+          c.textAlign='left';c.direction='ltr';c.textBaseline='middle';
           c.font='700 23px "Vazirmatn",Tahoma,sans-serif';
           const name=String(appSettings.contactName||'مخاطب').trim();
           c.fillText(name,87,37,Math.max(160,w*.28));
