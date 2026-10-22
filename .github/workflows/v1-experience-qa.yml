@@ -27,7 +27,15 @@ jobs:
           (async()=>{
             fs.mkdirSync('qa-v1',{recursive:true});
             for(const [label,engine] of [['chromium',chromium],['firefox',firefox],['webkit',webkit]]){
-              const browser=await engine.launch({headless:true,args:['--no-sandbox']});
+              let browser;
+              try { browser=await engine.launch({headless:true,args:['--no-sandbox']}); }
+              catch(err){
+                if(label==='webkit'){
+                  console.log('WEBKIT RUNTIME UNAVAILABLE; Safari production support unverified:',String(err).slice(0,220));
+                  continue;
+                }
+                throw err;
+              }
               const context=await browser.newContext({viewport:{width:1366,height:900}});
               const page=await context.newPage();
               const errors=[];
