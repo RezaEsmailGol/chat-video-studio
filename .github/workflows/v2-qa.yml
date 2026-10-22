@@ -108,6 +108,7 @@ jobs:
             await page.waitForFunction(()=>messages.length===8,null,{timeout:10000});
             assert.equal(await page.evaluate(()=>messages.length),8);
             await page.reload({waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>!!window.chatStudioReady,null,{timeout:30000});
             await page.evaluate(()=>window.chatStudioReady);
             assert.equal(await page.evaluate(()=>messages.length),8);
             console.log('V2 MULTI PROJECT SAVE/SWITCH/RELOAD PASS',label);
