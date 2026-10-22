@@ -525,6 +525,28 @@
             </div>
             </details>
 
+            <!-- Ready-to-edit Persian scenario packs speed up a first video. -->
+            <section id="studioScenarioPacks" class="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 shadow-lg" aria-labelledby="studioScenarioTitle">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h3 id="studioScenarioTitle" class="text-sm font-bold text-white flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-teal-300" aria-hidden="true"></i>سناریوهای آماده فارسی</h3>
+                    <span class="text-xs text-slate-400">یک شروع سریع برای ساخت اولین ویدیو</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button type="button" onclick="loadStudioScenario('product')" class="flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 min-h-[44px] text-xs font-semibold text-slate-100">
+                        <i class="fa-solid fa-bag-shopping text-amber-300" aria-hidden="true"></i>معرفی محصول
+                    </button>
+                    <button type="button" onclick="loadStudioScenario('support')" class="flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 min-h-[44px] text-xs font-semibold text-slate-100">
+                        <i class="fa-solid fa-headset text-cyan-300" aria-hidden="true"></i>پشتیبانی مشتری
+                    </button>
+                    <button type="button" onclick="loadStudioScenario('education')" class="flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 p-3 min-h-[44px] text-xs font-semibold text-slate-100">
+                        <i class="fa-solid fa-graduation-cap text-violet-300" aria-hidden="true"></i>آموزش کوتاه
+                    </button>
+                </div>
+                <p id="studioSceneInfo" class="mt-2 text-[11px] text-slate-400" role="status" aria-live="polite">
+                    سناریوها نمونه‌های ساختگی هستند؛ قبل از جایگزینی پیام‌ها تأیید گرفته می‌شود.
+                </p>
+            </section>
+
             <!-- Editable Messages List -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-800">
@@ -536,7 +558,15 @@
                         <span id="msgCountBadge" class="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-mono">۱۰ پیام</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" id="studioUndo" onclick="studioUndo()" disabled title="بازگشت به تغییر قبلی (Ctrl+Z)" aria-label="برگرداندن تغییر آخر"
+                            class="min-h-9 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-100 disabled:opacity-35 text-xs border border-slate-700 flex gap-1 items-center">
+                            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>بازگشت
+                        </button>
+                        <button type="button" id="studioRedo" onclick="studioRedo()" disabled title="انجام دوباره تغییر (Ctrl+Shift+Z)" aria-label="انجام دوباره آخرین تغییر"
+                            class="min-h-9 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-100 disabled:opacity-35 text-xs border border-slate-700 flex gap-1 items-center">
+                            <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>دوباره
+                        </button>
                         <button onclick="resetToDefaultScreenshotChat()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1 border border-slate-700">
                             <i class="fa-solid fa-rotate-left text-sky-400"></i>
                             <span>بازگردانی سناریوی معرفی</span>
@@ -2924,6 +2954,7 @@
             badge.textContent = `${messages.length} پیام (جمع کل ویدیو: ${totalSec} ثانیه)`;
 
             if (messages.length === 0) {
+                refreshUndoUI();
                 container.innerHTML = `
                     <div class="text-center py-10 bg-slate-950/60 rounded-xl border border-dashed border-slate-800 text-slate-400 text-xs space-y-2">
                         <i class="fa-regular fa-comment-dots text-2xl text-slate-500"></i>
@@ -2935,6 +2966,7 @@
             }
 
             container.innerHTML = '';
+            refreshUndoUI();
             messages.forEach((msg, index) => {
                 const isRight = msg.side === 'right';
                 const hasReply = Boolean(msg.replyName || msg.replyText);
